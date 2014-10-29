@@ -1,0 +1,30 @@
+\documentclass{article}
+\usepackage{cite}
+\usepackage{hyperref}
+
+\begin{document}
+\title{Octokey: Public key authentication for the web}
+\author{Martin Kleppmann \and Conrad Irwin}
+\date{\today}
+\maketitle
+
+\begin{abstract}
+We propose Octokey, a cryptographic protocol for authenticating users, designed as a replacement for
+password authentication in consumer internet use cases. Every user is associated with a public key
+on the server, and clients authenticate by presenting a challenge signed with the user's private
+key, similar to SSH public key authentication. We also describe protocols which allow users to log
+in to their accounts on multiple devices, provision new devices, and revoke keys on devices that are
+lost or stolen.
+\end{abstract}
+
+\input{intro}
+\input{protocol}
+\input{revocation}
+\input{provision}
+\input{mobile}
+
+% TODO: OAuth-like thing by adding a third party's public key to your account
+
+\bibliography{references}{}
+\bibliographystyle{plain}
+\end{document}

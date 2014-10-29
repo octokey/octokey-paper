@@ -1,0 +1,21 @@
+\section{Delegated login by mobile device}
+Browser and phone meet at rendezvous point (URL in QR code) / communicate over rendezvous channel
+
+We must assume that the contents of the barcode can be read by an attacker: it may be
+electromagnetically snooped~\cite{Kuhn05}, or an attacker may simply point a camera at the victim's
+screen. In order to establish a secure channel between the smartphone and the desktop browser, it is
+therefore not appropriate to embed a symmetric private key in the barcode.
+
+The browser has a separate keypair, with the private key identifying the browser itself (not the
+user). The QR code contains the URL of the rendezvous point, and the fingerprint of the browser's
+public key. When the rendezvous channel is established, the browser sends a message to the client
+signed with the browser's private key; and the client checks the signature, and checks that the
+fingerprint of the public key that made the signature matches the fingerprint in the QR code. Thus
+man-in-the-middling would require an attacker to actually modify the on-screen QR code, rather than
+just eavesdrop it. If the attacker has enough access to the device that they are able to manipulate
+what is displayed on the screen, then they can impersonate the user after logging in anyway (so all
+bets are off for that user account on that site). The user still needs to make sure that they are
+not being tricked into logging in to a different site from the one they thought they were logging in
+to; this can be done by displaying the URL of the login page on the mobile phone when the user is
+prompted to approve the authentication request. If the URL is not what the user was expecting, they
+must decline the authentication request.

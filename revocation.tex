@@ -1,0 +1,58 @@
+\section{Key revocation}
+
+What happens if one or more of the user's trusted devices are stolen? The passphrase with which the
+key is encrypted can only delay an attacker from decrypting it, not reliably prevent decryption. So
+it needs to be possible to revoke a device's ability to authenticate as a particular user.
+
+The easiest way would be for each of a user's devices to have a different keypair and to register
+all of a user's public keys with each of the services they want to log in to. Then revocation could
+be implemented in two ways:
+
+\begin{itemize}
+\item On every authentication request, or periodically, the website checks a key revocation list at
+a designated URL. This approach is problematic because it is not secure by default: a buggy or
+missing implementation of revocation checking is likely to go unnoticed for a long time, and so an
+attempted revocation may have no effect. It also raises questions about the server hosting the
+revocation list: it must be trusted to always return the correct list of revoked keys, otherwise it
+could be abused for denial of service (by marking too many keys as revoked) or unauthorized access
+(by not omitting revoked keys from the list). Users also need some mechanism for securely adding
+keys to the revocation list, which introduces an authentication bootstrapping problem.
+\item Alternatively, when a user wishes to revoke a key, they use a different key on a different
+device (or a backup key stored in a secure location) to authenticate with every service that it has
+access to, and ask each service to remove the compromised public key from the list of authorized
+keys for that user. This can be done programmatically if each website provides an API for
+manipulating the authenticated user's public keys. However, it may still be slow (the user may have
+accounts on hundreds of different websites) and error-prone (websites may be temporarily unavailable
+or not implement the API correctly).
+\end{itemize}
+
+We propose a different approach to key revocation, which does not depend on the websites'
+implementation of any protocol or API, and which allows revocation to take instant effect.
+
+Instead of using a different keypair on each of a user's devices, we propose that a user should have
+only one keypair. That keypair is never stored on any one device, even in encrypted form; instead,
+the private key is split, each device only stores a portion of the private key, and the portions
+from two devices must be combined in order to obtain the entire private key. One portion of the key
+without the other portion is useless.
+
+Boneh \emph{et al.}~\cite{Boneh01} describe the mRSA (mediated RSA) algorithm, which is well suited
+in this application, because it allows an RSA signature to be incrementally generated on several
+different devices, each holding a portion of the private key, without the complete private key ever
+being present on any one of the devices. This reduces the risk of the private key being stolen.
+
+A private key $p$ may be partitioned in several different ways, e.g. $p = a_1+a_2 = b_1+b_2 =
+c_1+c_2$. If a device containing key portions $a_1$ and $b_1$ is lost or stolen, then to revoke that
+device's access, the user must delete key portions $a_2$ and $b_2$ from any devices on which they
+may be stored.
+
+When two devices $D_1$ and $D_2$ store corresponding parts of the private key, e.g. $a_1$ and $a_2$
+respectively, then we may say that $D_1$ and $D_2$ are \emph{paired}. Any two devices controlled by
+the user may be paired. Of course, keys can be partitioned into three or more portions, but we
+consider two portions to provide a good compromise between revokability and convenience.
+
+For an authentication request to be signed, any two devices that have been paired must cooperate.
+Typically, but not necessarily, one of the two devices is the device on which the user wants to log
+in. The other device may be a device physically close to them (e.g. a smartphone), or a designated
+remote server (that needs to be partially trusted, as discussed below).
+
+
