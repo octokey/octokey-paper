@@ -9,13 +9,21 @@
 \maketitle
 
 \begin{abstract}
-We propose Octokey, a cryptographic protocol for authenticating users, designed as a replacement for
-password authentication in consumer internet use cases. Every user is associated with a public key
-on the server, and clients authenticate by presenting a challenge signed with the user's private
-key, similar to SSH public key authentication. We also describe protocols which allow users to log
-in to their accounts on multiple devices, provision new devices, and revoke keys on devices that are
-lost or stolen.
+We propose Octokey, a cryptographic protocol for authenticating users, designed as a viable
+replacement for password authentication in consumer internet use cases. When a user signs up to a
+service, they provide a public key. Clients subsequently authenticate by presenting a challenge
+signed with the user's private key, similar to SSH public key authentication. We also describe
+protocols which allow users to log in to their accounts on multiple devices, provision new devices,
+and revoke keys on devices that are lost or stolen.
 \end{abstract}
+
+\emph{Note: We, the authors, have a background in developing commercial web applications. In the
+field of crypography, we are merely keen amateurs. We are aware that amateur cryptography is prone
+to catastrophic flaws, and we fully expect such flaws to be found in the ideas we are proposing.
+However, we have experience designing real-world systems with good user experiences, a perspective
+that we feel is often lacking in security research. We hope that this paper can stimulate a
+discussion that brings together the perspectives from research and industry, and we would like to
+solicit constructive feedback from all sides.}
 
 \input{intro}
 \input{protocol}

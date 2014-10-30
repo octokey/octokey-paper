@@ -1,20 +1,23 @@
 \section{Introduction}
 
 Despite their many well-known flaws, passwords are still by far the most commonly used
-authentication system on the web. However, as users sign up for ever more services, their use is
-becoming increasingly unsustainable: demanding that users choose passwords with sufficient entropy,
-use a different password for every site, not write them down and even rotate passwords periodically
-is unrealistic for most internet services.
+authentication system on the web.~\cite{Bonneau12} However, as users sign up for ever more services,
+their use is becoming increasingly unsustainable: demanding that users choose passwords with
+sufficient entropy, use a different password for every site, not write them down and even rotate
+passwords periodically is unrealistic for most internet services.
 
 With phishing attacks and leaks of password databases unfortunately commonplace, we seek a better
 solution. In this paper we focus on authentication in a consumer internet context, such as social
 media or e-commerce websites and mobile apps. For a majority of such use cases, an authentication
 system with the following properties is desirable:
 
-\begin{itemize}
-\item The system should minimize exposure to human error (such as phishing). Whilst human error
-is unavoidable, especially amongst non-technical users, the system should be designed so as to
-minimize the impact in the case of error.
+\begin{enumerate}
+\item The system should minimize exposure to human error (such as falling for a phishing attack).
+Whilst human error is unavoidable, especially amongst non-technical users, the system should be
+designed so as to minimize the impact in the case of error.
+\item In case a device is lost or stolen, the user should be able to easily revoke any credentials
+stored on the device, to minimise the chances that an attacker can use a stolen device to gain
+access to other systems.
 \item It is not necessary, and often undesirable, for the system to authenticate the user as a
 physical person. Many websites allow pseudonymous signup, which is desirable for reasons of privacy
 or freedom of speech. The purpose of the authentication system is thus only to verify that the
@@ -32,11 +35,11 @@ shared or public computer, knowing that their account on that service may be com
 they limit their use of `important' accounts (e.g. online banking) to trusted devices. Since there
 is no generally agreed boundary between `important' and `unimportant' websites, the same
 authentication system should be able to support both use cases.
-\end{itemize}
+\end{enumerate}
 
 In the next section we discuss various authentication systems that are used on the web, and explain
 why none of them meet these requirements. We then introduce Octokey, an authentication protocol
-which addresses these issues. We believe that Octokey could be a practicable solution to online
+which addresses these issues. We believe that Octokey could be a viable solution to online
 authentication in the near future, and we seek the information security community's feedback to
 refine this proposal.
 
@@ -49,26 +52,27 @@ remembering a large number of passwords is a big burden on users, and they are h
 human error: use of weak passwords, reuse of the same password across different services, phishing
 attacks and leaks of unhashed or weakly hashed password databases are sadly common.
 
-Password manager products such as 1Password or LastPass make it feasible for users to maintain a
-strong, unique password for each service they use. However, even when a unique password is used, an
-attacker who succeeds in stealing a password (e.g. by phishing, keylogging, man-in-the-middle attack
-or eavesdropping when it is accidentally sent over an unencrypted connection) has access to that
-user account until the password is changed, which is often a long time.
+Password managers built into web browsers, or external password manager products such as 1Password
+and LastPass, make it feasible for users to maintain a strong, unique password for each service they
+use. However, even when a unique password is used, an attacker who succeeds in stealing a password
+(e.g. by phishing, malware, keylogging, man-in-the-middle attack or eavesdropping when it is
+accidentally sent over an unencrypted connection) has access to that user account until the password
+is changed, which is often a long time.
 
 Password managers also have grave exposure to human error. For example, consider a user who wishes
 to log in to an `unimportant' website on an untrusted computer. It is very tempting for the user to
 type the master passphrase of their password manager into the untrusted computer, in order to
 decrypt the password database. This has the effect of exposing the user's entire password database
-to an attacker.
+to an attacker running malware on the untrusted computer.
 
 \subsection{One-time passwords and two-factor authentication}
 
 One-time passwords (OTPs) offer a solution for users who want to log in to their accounts on
 untrusted or partially trusted devices. The user must download a list of one-time passwords on a
 trusted device, or register a cryptographic device that generates a pseudorandom sequence of OTPs,
-or register a phone number to which OTPs can be sent on demand. Some services allow use of OTPs as
-sole authentication mechanism, while others use them in conjunction with a regular password
-(two-factor authentication).
+or register an email address or phone number to which OTPs can be sent on demand. Some services
+allow use of OTPs as sole authentication mechanism, while others use them in conjunction with a
+regular password (two-factor authentication).
 
 The advantage of OTPs is that the exposure to attacks is limited to a single service, and ends when
 the user clicks the logout button (assuming the session is correctly invalidated on the server, and
@@ -81,13 +85,18 @@ use them. Moreover, the common ``remember me on this device'' feature weakens tw
 authentication (attackers just need to steal the ``remember me'' cookie as well as keylogging the
 password).
 
+OTPs sent on demand via email or SMS also have the effect of `outsourcing' the authentication to the
+email provider or the mobile network provider, respectively: any attacker who can access the email
+provider or SMS messages can also gain access to any service using on-demand OTPs. This essentially
+makes them federated login schemes (see next section).
+
 \subsection{Federated identity}
 
 OpenID~\cite{OpenID} is probably the best-known attempt to remove the need for a separate password
-on every service. Some identity providers, such as Google Federated Login~\cite{GoogleOpenID},
-combine OpenID and OAuth~\cite{OAuth}. Mozilla Persona (BrowserID)~\cite{Persona, BrowserID} uses a
-different protocol, but is similar in the way it delegates authentication to the user's email
-provider (or a fallback service provided by Mozilla).
+on every service. Some identity providers, such as Google Federated Login~\cite{GoogleOpenID} and
+Facebook Connect, combine the ideas of OpenID and OAuth~\cite{OAuth}. Mozilla Persona
+(BrowserID)~\cite{Persona, BrowserID} uses a different protocol, but is similar in the way it
+delegates authentication to the user's email provider (or a fallback service provided by Mozilla).
 
 Such federated authentication protocols do not solve the fundamental problem of authentication: they
 only delegate it to the identity provider, who must then use some other authentication method (most
@@ -100,10 +109,10 @@ can lead to all of a user's accounts being compromised.
 Moreover, the relying party needs to trust the identity provider to correctly authenticate the user.
 If the identity provider is compromised, the relying party has no way of detecting unauthorized
 logins from that identity provider. If the identity provider experiences an outage or goes out of
-business, users of that provider may lose their ability to log in (unless they had set up delegation
-of their identity URL, which is unrealistic to expect of non-technical users). When different
-services are in competition with each other, it is typically not in one service's interest to accept
-a competing service as identity provider.
+business, users of that provider lose their ability to log in (unless they had previously set up
+delegation of their identity URL, which is unrealistic to expect of non-technical users). When
+different services are in competition with each other, it is typically not in one service's interest
+to accept a competing service as identity provider.
 
 For these reasons, OpenID login is typically only accepted by small services; major online services
 rarely act as a relying party in OpenID. The competitive dynamic between services makes it unlikely
@@ -131,26 +140,27 @@ Despite their advantages, client certificates are not widely used for consumer i
 Problems include:
 
 \begin{itemize}
-\item the server must decide which CAs to trust, or the service must itself act as a CA if it wants
-to avoid a trust dependency on a third party;
-\item pseudonymous usage of services is difficult if the certificate is issued by an external CA;
-\item the certificate (including identifying personal details such as the user's real name) is sent
-unencrypted during the TLS handshake, making it visible to passive network attackers;\footnote{This
+\item The user experience of installing and managing certificates is unfriendly in most web
+browsers.
+\item Web browsers do not offer a consistent mechanism for logging out or switching to another
+account after logging in with a client certificate.
+\item A website provider must decide which CAs to trust, or it must itself act as a CA in order to
+avoid a trust dependency on a third party.
+\item Pseudonymous usage of services is difficult if the certificate is issued by an external CA.
+\item The certificate (including identifying personal details such as the user's real name) is sent
+unencrypted during the TLS handshake, making it visible to passive network attackers.\footnote{This
 can be mitigated by performing the authentication handshake during a TLS renegotiation, but that has
 a negative performance impact, and makes the server configuration more complicated.}
-\item the user experience of installing and managing certificates is unfriendly in most web
-browsers;
-\item web browsers do not offer a consistent mechanism for logging out or switching to another
-account;
-\item certificate validation can be difficult to set up on the server, as TLS termination is
-typically performed on a separate server from the application server running business logic;
-\item certificate validation can be computationally expensive, creating a risk of denial of
-service;~\cite{Parsovs14}
-\item revocation of certificates (which requires CRLs or OCSP~\cite{OCSP}) is easy to get wrong, and
-a slowdown or outage of OCSP servers can impact a service's availability.
+\item Certificate validation can be difficult to deploy on the server, as TLS termination is
+typically performed on a different server from the application server running business logic.
+\item Certificate validation can be computationally expensive, creating a risk of denial of
+service.~\cite{Parsovs14}
+\item Revocation of certificates (which requires CRLs or OCSP~\cite{OCSP}) is easy to get wrong, and
+a slowdown or outage of OCSP servers can impact a service's availability (creating another
+third-party dependency).
 \end{itemize}
 
-\subsection{FIDO}
+\subsection{Private keys in secure hardware}
 
 The \emph{Fast Identity Online} (FIDO) Alliance, an industry consortium, has drafted a specification
 for new user authentication protocol.~\cite{FIDOOverview, FIDOSpec} Its basic mechanism is that the
@@ -164,17 +174,22 @@ of the FIDO specification is dedicated to issues of using hardware modules (\emp
 to store private keys and perform signing operations. On the other hand, the specification largely
 ignores the issue of revoking a key that has been lost or stolen.
 
-Whilst the security characteristics of a hardware module are appealing, the user experience is quite
+Another hardware-based authentication project is Pico~\cite{Stajano11}, which also proves ownership
+of a secret key by signing a challenge. Pico addresses the risk of key theft by using $k$-out-of-$n$
+secret sharing across several hardware modules carried by the user, such as glasses, belt, wallet,
+and jewellery. This approach is theoretically interesting, but the prospect of a practical
+deployment seems remote.
+
+Whilst the security characteristics of hardware modules are appealing, the user experience is quite
 inconvenient at present. For example, a USB-based module cannot be used on a mobile device that has
 no USB port. A small number of high-value services (such as online banking) can afford to
 significantly inconvenience users in the name of security, but for the majority of online services,
 any authentication method that is less convenient than a password is unlikely to gain adoption, even
 if it is significantly more secure.
 
-It is conceivable that in future, hardware authenticators will be built into computing devices such
-as laptops and smartphones, so that users will be able to use them without the friction of an
-external authenticator. However, with Octokey, we seek a solution that can be deployed today, without
-waiting for a hardware upgrade cycle.
+It is conceivable that in future, authentication modules will be ubiquitously built into devices, so
+that users can to use them without the friction of a special-purpose authenticator device. However,
+we seek a solution that can be deployed today, without waiting for a hardware upgrade cycle.
 
 % https://www.schneier.com/blog/archives/2014/09/security_of_pas.html
 % https://crypton.io/
