@@ -19,13 +19,13 @@ designed so as to minimize the impact in the case of error.
 stored on the device, to minimise the chances that an attacker can use a stolen device to gain
 access to other systems.
 \item It is not necessary, and often undesirable, for the system to authenticate the user as a
-physical person. Many websites allow pseudonymous signup, which is desirable for reasons of privacy
+physical person. Many services allow pseudonymous signup, which is desirable for reasons of privacy
 or freedom of speech. The purpose of the authentication system is thus only to verify that the
 current user is the same person as the one who originally signed up under a particular username; no
 authentication is performed at signup.
 \item The system should not depend on any trusted third party, to avoid risks arising from failure
 of the third party (security compromise, going out of business, change of policies, etc).
-\item The system should be easy for end-users to install and use, and easy for website owners to
+\item The system should be easy for end-users to install and use, and easy for service owners to
 deploy. Since user signup and user activity rates are important business metrics for many online
 services, the system should make signup and login extremely easy and enjoyable for users.
 \item Users should have the freedom to use the system on a variety of devices, including shared or
@@ -33,7 +33,7 @@ public computers that are only partially trusted, whilst minimizing their exposu
 For example, a user may choose log in to `unimportant' services (e.g. casual online games) on a
 shared or public computer, knowing that their account on that service may be compromised; however,
 they limit their use of `important' accounts (e.g. online banking) to trusted devices. Since there
-is no generally agreed boundary between `important' and `unimportant' websites, the same
+is no generally agreed boundary between `important' and `unimportant' services, the same
 authentication system should be able to support both use cases.
 \end{enumerate}
 
@@ -79,7 +79,7 @@ the user clicks the logout button (assuming the session is correctly invalidated
 assuming that the attacker does not have a means of extending their privileges, e.g. by granting
 themselves OAuth access to the account).
 
-However, OTPs are so inconvenient to use that very few websites are willing to adopt them as their
+However, OTPs are so inconvenient to use that very few services are willing to adopt them as their
 only or primary authentication mechanism, and only the most security-conscious users are willing to
 use them. Moreover, the common ``remember me on this device'' feature weakens two-factor
 authentication (attackers just need to steal the ``remember me'' cookie as well as keylogging the
@@ -106,13 +106,14 @@ problem: if an attacker gains access to the user's account with the identity pro
 access any account associated with that identity. Like with a password manager, a single user error
 can lead to all of a user's accounts being compromised.
 
-Moreover, the relying party needs to trust the identity provider to correctly authenticate the user.
-If the identity provider is compromised, the relying party has no way of detecting unauthorized
-logins from that identity provider. If the identity provider experiences an outage or goes out of
-business, users of that provider lose their ability to log in (unless they had previously set up
-delegation of their identity URL, which is unrealistic to expect of non-technical users). When
-different services are in competition with each other, it is typically not in one service's interest
-to accept a competing service as identity provider.
+Moreover, the relying party (the service where the user is trying to log in) needs to trust the
+identity provider to correctly authenticate the user.  If the identity provider is compromised, the
+relying party has no way of detecting unauthorized logins from that identity provider. If the
+identity provider experiences an outage or goes out of business, users of that provider lose their
+ability to log in (unless they had previously set up delegation of their identity URL, which is
+unrealistic to expect of non-technical users). When different services are in competition with each
+other, it is typically not in one service's interest to accept a competing service as identity
+provider.
 
 For these reasons, OpenID login is typically only accepted by small services; major online services
 rarely act as a relying party in OpenID. The competitive dynamic between services makes it unlikely
@@ -138,13 +139,13 @@ Client certificate authentication can be performed by hardware tokens, e.g. usin
 
 Despite their advantages, client certificates are not widely used for consumer internet services.
 Problems include:
-
 \begin{itemize}
 \item The user experience of installing and managing certificates is unfriendly in most web
 browsers.
 \item Web browsers do not offer a consistent mechanism for logging out or switching to another
 account after logging in with a client certificate.
-\item A website provider must decide which CAs to trust, or it must itself act as a CA in order to
+\item In native apps (both mobile and desktop), support for TLS certificates is patchy.
+\item A service provider must decide which CAs to trust, or it must itself act as a CA in order to
 avoid a trust dependency on a third party.
 \item Pseudonymous usage of services is difficult if the certificate is issued by an external CA.
 \item The certificate (including identifying personal details such as the user's real name) is sent
@@ -177,7 +178,7 @@ ignores the issue of revoking a key that has been lost or stolen.
 Another hardware-based authentication project is Pico~\cite{Stajano11}, which also proves ownership
 of a secret key by signing a challenge. Pico addresses the risk of key theft by using $k$-out-of-$n$
 secret sharing across several hardware modules carried by the user, such as glasses, belt, wallet,
-and jewellery. This approach is theoretically interesting, but the prospect of a practical
+and jewellery. This approach is theoretically interesting, but the possibility of a large-scale
 deployment seems remote.
 
 Whilst the security characteristics of hardware modules are appealing, the user experience is quite
