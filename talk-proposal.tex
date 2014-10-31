@@ -81,14 +81,16 @@ not older than some maximum age.
 \item $r$ is a registered username for this service, and $(n, e)$ is a public key for that user.
 \end{itemize}
 
+\subsection{Key revocation}
+
 To support key revocation, we use the mRSA scheme proposed by Boneh et al.~\cite{Boneh01} The
 private exponent $d$ is never stored on any one device. Instead, it is split into pairs such that
-$d = d_{1,a} + d_{1,b} = d_{2,a} + d_{2,b} = \dots$ and the key fragments are distributed across
-several devices controlled by the user. If two devices each have one of the summands of such a pair,
-we call the devices \emph{paired}.
+$d = d_{1,a} + d_{1,b} = d_{2,a} + d_{2,b} = \dots \mod \phi(n)$ and the key fragments are
+distributed across several devices controlled by the user. If two devices each have one of the
+summands of such a pair, we call the devices \emph{paired}.
 
 Now any two paired devices need to collaborate in order to generate a valid signature: since
-$m^d = m^{d_{1,a} + d_{1,b}} = m^{d_{1,a}} m^{d_{1_b}} \mod n$, each device can perform its own
+$m^d = m^{d_{1,a} + d_{1,b}} = m^{d_{1,a}} m^{d_{1,b}} \mod n$, each device can perform its own
 exponentiation, and the client that wants to log in can multiply the two results in order to obtain
 a valid signature.
 
@@ -99,6 +101,54 @@ For convenience, one of the user's devices may be an online service. That servic
 trusted to store key fragments, and to delete them when instructed (it does not have the ability to
 log in to any accounts by itself). This service does not need to be trusted by any website using
 Octokey authentication.
+
+\subsection{Key distribution}
+
+To provision a new device for a user (i.e. to pair it with their existing devices), we need to
+generate a new key split $(d_{i+1,a}, d_{i+1,b})$ such that
+$d_{i+1,a} + d_{i+1,b} = d_{i,a} + d_{i,b} \mod \phi(n)$, without reassembling the entire private
+exponent $d$ on any single device (and thus risking it being stolen), and without knowing $\phi(n)$.
+
+Say the user has two existing devices $a$ and $b$, storing $d_{i,a}$ and $d_{i,b}$ respectively. We
+now want to introduce a new device $c$ and pair it with $a$. To this end, $c$ generates a uniformly
+distributed random number $d_{i+1,c}$ with $0 < d_{i+1,c} < 2^n$, and another uniformly distributed
+random number $g$ with $0 < g < d_{i+1,c}$.
+
+By exchanging a sequence of messages, the devices can arrive in the desired state. The algorithm
+will be described in the full paper.
+
+\subsection{Delegated authentication}
+
+Users should be able to perform a one-time login to specific services on a device without
+transferring their key to that device. For example, they may temporarily want to log in to their
+account on a friend's gaming console.
+
+To achieve this, the device requesting login displays a 2D barcode on its screen, and the user scans
+it with the camera of a mobile device that can perform the authentication (perhaps paired with a
+remote server). The barcode contains a TCP endpoint to which the mobile device can connect, and
+the devices can exchange the challenge and signature for a particular authentication request through
+that channel.
+
+This provides security comparable to a one-time password, but is much more convenient to use.
+
+\subsection{Channel binding}
+
+Channel binding can be used to protect against a signed challenge being stolen by a MITM attacker.
+We are considering origin-bound certificates~\cite{Dietz12} (the fingerprint of the OBC can be
+incorporated into the authentication signature). This does not change the user experience, but it
+increases the difficulty of implementing Octokey, so we propose making it an optional feature.
+
+\section{Implementation}
+
+We are working on a prototype implementation which allows us to explore the user experience aspects
+of the system.
+
+Our intention is to make implementations of both the server and the client side available freely as
+open source, and to work towards defining the protocol as an open standard that anyone can
+implement.
+
+At this stage, we are seeking feedback from the cryptography and information security community to
+improve this proposal.
 
 \bibliography{references}{}
 \bibliographystyle{plain}
