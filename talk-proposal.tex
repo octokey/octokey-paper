@@ -77,7 +77,6 @@ $H$ encodes its arguments as a binary string and then applies the \textsc{EMSA-P
 
 The client then sends $(m^d \mod n, c, u, r, n, e)$ to the server over TLS. The server can verify
 the signature by checking all of the following:
-
 \begin{itemize}
 \item $m^d \mod n$ is a valid PKCS\#1 signature of the values $(c, u, r)$, checked against the
 public key $(n, e)$.
@@ -93,8 +92,8 @@ To support key revocation, we use the mRSA scheme proposed by Boneh et al.~\cite
 private exponent $d$ is never stored on any one device. Instead, it is split into pairs such that
 $d = d_{1,a} + d_{1,b} = d_{2,a} + d_{2,b} = \dots \mod \phi(n)$ and the key fragments are
 distributed across several devices controlled by the user. If two devices each have one of the
-summands of such a pair, we call the devices \emph{paired}. (The scheme also generalises to tripes
-of three devices, etc.)
+summands of such a pair, we call the devices \emph{paired}. (The scheme also generalises to
+triples of three devices, etc.)
 
 Now any two paired devices need to collaborate in order to generate a valid signature: since
 $m^d = m^{d_{1,a} + d_{1,b}} = m^{d_{1,a}} m^{d_{1,b}} \mod n$, each device can perform its own
@@ -149,7 +148,7 @@ increases the difficulty of implementing Octokey, so we propose making it an opt
 \section{Implementation}
 
 We are working on a prototype implementation which allows us to explore the user experience aspects
-of the system.
+of the system. We hope to demonstrate this prototype at the conference.
 
 Our intention is to make implementations of both the server and the client side available freely as
 open source, and to work towards defining the protocol as an open standard that anyone can
