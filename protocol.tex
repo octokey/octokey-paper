@@ -1,23 +1,149 @@
-\section{Octokey client-server protocol}
+\section{Octokey protocol overview}
 
 Octokey is a user authentication protocol designed to meet the goals stated in the introduction. It
 aims to provide good security in a software-only configuration, with cryptographic hardware modules
 being an optional extra. It strives to be a \emph{trust-free} protocol: it is completely
-decentralised, there is no dependency on any identity provider, and the extent to which certificate
-authorities need to be trusted is minimised as far as possible.
+decentralised, there is no dependency on any identity provider, and the extent to which PKI
+certificate authorities need to be trusted is minimised as far as possible.
 
-In Octokey, a client device proves to a server that it knows the user's private key. Thus, we can
-think of it as a machine-to-machine authentication protocol, and it needs to be preceded by a
-human-to-machine authentication step: for example, a password or biometric information can be used
-by the client device to unlock or decrypt the private key. However, since this password or biometric
-information is not sent over the network, it can be considered independently from the
+The basic operation of Octokey is inspired by SSH public key authentication, which is widely used
+for shell access to remote servers. When using Octokey for the first time, a user must generate a
+RSA keypair.\footnote{We hope that the approach could be extended to support other public-key
+cryptosystems such as ECC.} When the user signs up to a service, or migrates from another
+authentication method to Octokey, the user submits their public key to the service. This is
+analogous to creating a password when a user first signs up to a service.
+
+Whenever the user wishes to log in, they must prove ownership of the private key. A client does this
+by requesting a challenge from the server, signing it using the private key, and submitting the
+signature to the server. The details of this protocol are given below.
+
+We can think of Octokey as a machine-to-machine authentication protocol, and it needs to be preceded
+by a human-to-machine authentication step: for example, a password or biometric information can be
+used by the client device to unlock or decrypt the private key. However, since this password or
+biometric information is not sent over the network, this concern is orthogonal to the
 machine-to-machine authentication. Any improvements in biometric sensors, for example, do not
-require any changes from service providers -- they only need to be supported by client devices for
-the human-to-machine authentication step.
+require any changes to the Octokey protocol or any support by service providers.
 
 If a password is used to decrypt the user's private key, they need only remember a single password
 per device (or perhaps per keypair), but not a separate password for every service where they have
 an account. We believe that a single password is an acceptable user experience.
+
+\subsection{Authentication requests}
+
+Each user has a RSA keypair $(n, d, e)$ where $n$ is the modulus, $d$ is the private exponent and
+$e$ is the public exponent. When signing up to a service, the user submits their public key
+$(n, e)$ to the service. The service stores the public key as part of the user record.
+
+To log in, the client first requests a challenge $c$ from the service via a HTTP endpoint. It then
+calculates $m = H(c, u, r)$ where $u$ is the URL of the service endpoint and $r$ is the user's
+registered username. $H$ encodes its arguments as a binary string and then applies the
+\textsc{EMSA-PSS-Encode} operation (hashing and padding) as defined in PKCS\#1.~\cite{PKCS1} From
+that, the RSA signature can be calculated as $s = m^d \mod n$.
+
+The client then constructs the authentication request, which is an encoding of the tuple
+$(s, c, u, r, n, e)$. The authentication request is sent to the server as part of a HTTP request
+over TLS, and is handled at the application layer. The server can verify the authentication request
+by checking that all of the following are true:
+\begin{itemize}
+\item $m^d \mod n$ is a valid PKCS\#1 signature of the values $(c, u, r)$, checked against the
+public key $(n, e)$.
+\item $c$ is a valid challenge issued by this service, has not been used for login before, and is
+not older than some maximum age. This prevents replay attacks.
+\item $u$ is a valid URL for this service. A login request for an unknown URL must be rejected.
+This prevents phishing-like attacks, whereby an attacker creates an imitation website under a
+similar-looking URL and tricks the user into logging in.
+\item $r$ is a registered username for this service, and $(n, e)$ is a public key for that user.
+\end{itemize}
+If the authentication request is successfully verified, the user is logged in by the server in the
+usual manner, for example by setting an appropriate session cookie.
+
+\subsection{Protection against key theft}
+
+Many users have multiple devices (e.g. laptop, smartphone, tablet, game console) on which they need
+to be able to log in to their accounts with online services. As described above, the private key
+$(n, d, e)$ would need to be copied to each of those devices. If any of those devices is lost or
+compromised, and an attacker can break the human-to-machine authentication step (perhaps due to a
+weak password on the private key), the attacker could gain access to all of a user's accounts.
+
+To mitigate this risk, we ensure that the private exponent $d$ is never stored on any device.
+Instead, we split it into key fragments that are distributed amongst the user's devices. We use the
+\emph{mediated RSA} (mRSA) scheme proposed by Boneh et al.~\cite{Boneh01} which uses the fact that
+$$s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n$$ provided that $d = d_a + d_b \mod \phi(n)$.
+
+If two devices $a$ and $b$ each have a key fragment $d_a$ and $d_b$ respectively, and those
+fragments sum to the private exponent $d$, then we call those devices \emph{paired}. In order to
+generate a valid signature, any two paired devices need to collaborate. If device $a$ wants to
+generate an authentication request, it can send $(c, u, r)$ to device $b$, which may first ask the
+user to confirm whether they wish to log in to URL $u$ using username $r$. If yes, $b$ calculates
+$H(c, u, r)^{d_b} = m^{d_b}$ and returns that value to $a$. Then $a$ can calculate
+$s = m^{d_a} m^{d_b}$ by using its own key fragment $d_a$ and the value returned by $b$, and thus
+log in.
+
+This scheme ensures that the user can revoke a device's login capability if it is lost, stolen or
+compromised: every device that is paired with the lost device can be instructed to delete the key
+fragment corresponding to the lost device. When the paired fragments are deleted, the key fragments
+on the lost device become useless. Thus, even if the human-to-machine authentication is weak, not
+all is lost: the user only needs to revoke the lost device's key fragments faster than an attacker
+can break the human-to-machine authentication.
+
+A key could also be split into more than two fragments, which would protect against the case where
+an attacker manages to steal two or more devices. However, this comes at the cost of a more
+cumbersome user experience, so we concentrate on the two-fragment case for now.
+
+We expect that users have at least three devices (e.g.\ a laptop, a smartphone and a remote store --
+see below), that each device is paired with each of the others, and that each pairing uses
+different, randomly selected key fragments. If the user has $k$ devices, they can lose up to $k-2$
+devices and still be able to log in to services without resorting to a backup.
+
+\subsection{Remote key fragment store}
+
+Authenticating by using paired physical devices (e.g.\ a laptop and a smartphone) yields a similar
+user experience to current 2-factor authentication solutions, whereby the user must fetch the phone
+from their pocket, launch the appropriate app, and perform some kind of handshake. This is possible,
+but distinctly less convenient for users than typing a password, so it is not the simple user
+experience we are looking for.
+
+However, there is a simple solution within the mRSA framework: one of the user's `devices' may be a
+remote service on the internet. This service stores key fragments that are paired with each of the
+user's physical devices, and responds to signing requests by performing the modular exponentiation
+using its key fragments. This allows a user to authenticate with services using only one physical
+device -- the coordination with the remote key fragment store happens automatically behind the
+scenes.
+
+The key fragment store need only be partially trusted. It cannot authenticate as the user without
+the cooperation of one of the user's physical devices. From the point of view of a service verifying
+the signature on an authentication request, the key fragment store does not even exist (unlike a
+federated login system, where the relying party must trust the identity provider). The user only
+needs to trust the key fragment store to not collude with attackers who steal devices, and to delete
+key fragments when the user requires key revocation.
+
+TODO Prevent denial of service due to rate limiting or due to an attacker revoking a user's active
+devices.
+
+\section{Key distribution}
+
+To provision a new device for a user (i.e. to pair it with their existing devices), we need to
+generate a new key split $(d_{i+1,a}, d_{i+1,b})$ such that
+$d_{i+1,a} + d_{i+1,b} = d_{i,a} + d_{i,b} \mod \phi(n)$, without reassembling the entire private
+exponent $d$ on any single device (and thus risking it being stolen), and without knowing $\phi(n)$.
+
+Say the user has two existing devices $a$ and $b$, storing $d_{i,a}$ and $d_{i,b}$ respectively. We
+now want to introduce a new device $c$ and pair it with $a$. To this end, $c$ generates a uniformly
+distributed random number $d_{i+1,c}$ with $0 < d_{i+1,c} < 2^n$, and another uniformly distributed
+random number $g$ with $0 < g < d_{i+1,c}$.
+
+By exchanging a sequence of messages, the devices can arrive in the desired state. The algorithm
+will be described in the full paper.
+
+\subsection{Key rotation}
+\subsection{Multiple keypairs per user}
+\subsection{Security levels}
+\subsection{Device-to-device communication}
+\subsection{Threats}
+Undetected malware on a compromised machine can secretly log in to the user's services. If it's not
+noticed, it can't be revoked. But that is true of any software-based solution; only dedicated
+cryptographic hardware can prevent this, and we don't want to rely on hardware, as discussed in the
+introduction.
 
 \subsection{Channel binding}
 
@@ -29,8 +155,8 @@ Origin-Bound Certificates (OBC)~\cite{Dietz12} should be used to protect the ses
 MITM attackers.
 
 Note that channel binding does not protect against all MITM attack scenarios. For example, in an
-e-commerce setting, an attacker who has stolen the website's private key, or who has fraudulently
-obtained a certificate from a CA trusted by the user's browser, can still impersonate the website.
+e-commerce setting, an attacker who has stolen the service's private key, or who has fraudulently
+obtained a certificate from a CA trusted by the user's browser, can still impersonate the service.
 If the user does not notice the impersonation, and enters their credit card number to make a
 purchase, the attacker is able to steal the credit card number. In situations like these -- where
 the user is providing confidential information to the service -- the PKI still needs to be trusted.
