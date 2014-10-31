@@ -1,11 +1,15 @@
-\documentclass{article}
+\documentclass{acm_proc_article-sp}
 \usepackage{cite}
 \usepackage{hyperref}
+\sloppy
 
 \begin{document}
+\toappear{This is an unpublished draft. Please don't distribute without our permission.}
 \title{Octokey: Public key authentication for the web}
-\author{Martin Kleppmann \and Conrad Irwin}
-\date{\today}
+\numberofauthors{2}
+\author{
+    \alignauthor Martin Kleppmann \\ \email{martin@kleppmann.com}
+    \alignauthor Conrad Irwin \\ \email{conrad.irwin@gmail.com}}
 \maketitle
 
 \begin{abstract}
@@ -16,6 +20,8 @@ signed with the user's private key, similar to SSH public key authentication. We
 protocols which allow users to log in to their accounts on multiple devices, provision new devices,
 and revoke keys on devices that are lost or stolen.
 \end{abstract}
+
+\bigskip
 
 \emph{Note: We, the authors, have a background in developing commercial web applications. In the
 field of crypography, we are merely keen amateurs. We are aware that amateur cryptography is prone
