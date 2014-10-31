@@ -41,7 +41,7 @@ use is becoming increasingly unsustainable. However, the alternatives are also u
 \begin{description}
 \item[Password managers] remove the burden of remembering passwords, but passwords are still
 susceptible to being stolen by malware, man-in-the-middle attackers or eavesdropping on SSL-stripped
-connections.
+connections. If the password manager itself is compromised, recovery is difficult.
 \item[Federated login] such as OpenID, Facebook Connect or Mozilla Persona requires that the relying
 party trusts the identity provider to correctly authenticate the user. If the identity provider has
 an outage, goes out of business or is compromised, the relying party is in a difficult situation.
@@ -61,7 +61,8 @@ lost or stolen.
 
 For consumer internet purposes, ease of sign-up and ease of login are essential, and mechanisms
 which add inconvenience are unlikely to gain wide adoption. In order to be viable, an alternative
-authentication system must be \emph{more} convenient than a password, and also more secure.
+authentication system must be \emph{more} convenient for users than a password, and also more
+secure.
 
 \section{The Octokey protocol in brief}
 
@@ -74,8 +75,8 @@ $m = H(c, u, r)$ where $u$ is the URL of the service endpoint and $r$ is their r
 $H$ encodes its arguments as a binary string and then applies the \textsc{EMSA-PSS-Encode} operation
 (hashing and padding) as defined in PKCS\#1.~\cite{PKCS1}
 
-The client then sends $(m^d \mod n, c, u, r, n, e)$ to the server. The server can verify the
-signature by checking all of the following:
+The client then sends $(m^d \mod n, c, u, r, n, e)$ to the server over TLS. The server can verify
+the signature by checking all of the following:
 
 \begin{itemize}
 \item $m^d \mod n$ is a valid PKCS\#1 signature of the values $(c, u, r)$, checked against the
@@ -92,7 +93,8 @@ To support key revocation, we use the mRSA scheme proposed by Boneh et al.~\cite
 private exponent $d$ is never stored on any one device. Instead, it is split into pairs such that
 $d = d_{1,a} + d_{1,b} = d_{2,a} + d_{2,b} = \dots \mod \phi(n)$ and the key fragments are
 distributed across several devices controlled by the user. If two devices each have one of the
-summands of such a pair, we call the devices \emph{paired}.
+summands of such a pair, we call the devices \emph{paired}. (The scheme also generalises to tripes
+of three devices, etc.)
 
 Now any two paired devices need to collaborate in order to generate a valid signature: since
 $m^d = m^{d_{1,a} + d_{1,b}} = m^{d_{1,a}} m^{d_{1,b}} \mod n$, each device can perform its own
@@ -125,8 +127,9 @@ will be described in the full paper.
 \subsection{Delegated authentication}
 
 Users should be able to perform a one-time login to specific services on a device without
-transferring their key to that device. For example, they may temporarily want to log in to their
-account on a friend's gaming console.
+provisioning that device as one of their trusted devices. For example, they may temporarily want to
+log in to their online gaming account on a friend's gaming console. After logging out, their friend
+cannot log in again as the user without repeating the delegated authentication flow.
 
 To achieve this, the device requesting login displays a 2D barcode on its screen, and the user scans
 it with the camera of a mobile device that can perform the authentication (perhaps paired with a
