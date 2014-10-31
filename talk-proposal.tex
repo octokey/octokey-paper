@@ -1,11 +1,14 @@
-\documentclass{article}
+\documentclass{acm_proc_article-sp}
 \usepackage{cite}
 \usepackage{hyperref}
 \usepackage{amsmath}
 
 \begin{document}
 \title{Octokey: Public key authentication for the web}
-\author{Martin Kleppmann \and Conrad Irwin}
+\numberofauthors{2}
+\author{
+    \alignauthor Martin Kleppmann \\ \email{martin@kleppmann.com}
+    \alignauthor Conrad Irwin \\ \email{conrad.irwin@gmail.com}}
 \date{\today}
 \maketitle
 
@@ -18,6 +21,8 @@ protocols which allow users to log in to their accounts on multiple devices, pro
 and revoke keys on devices that are lost or stolen.
 \end{abstract}
 
+\bigskip
+
 \emph{Note: We, the authors, have a background in developing commercial web applications. In the
 field of crypography, we are merely keen amateurs. We are aware that amateur cryptography is prone
 to catastrophic flaws, and we fully expect such flaws to be found in the ideas we are proposing.
@@ -27,7 +32,7 @@ our ideas to the cryptography and information security experts at RWC 2015, in o
 discussion and seek feedback from all sides. We believe that such collaboration could lead to a
 viable replacement for passwords that has eluded us for so long.}
 
-\section{Existing authentication systems}
+\section{Existing systems}
 
 Despite their many well-known flaws, passwords are still by far the most commonly used
 authentication system on the web.~\cite{Bonneau12} As users sign up for ever more services, their
