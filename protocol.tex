@@ -166,3 +166,41 @@ store. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a response) for
 brute-force the password without contacting the remote store, and thus circumvent the rate-limiting.
 It is therefore important that communication with the remote store is protected from eavesdropping
 (using TLS) and is not logged on the device.
+
+\subsection{Channel binding and preventing MITM}
+
+Once a device has assembled a signature for an authentication request, that signature has the
+function of a one-time password: if an attacker can intercept it before it reaches the intended
+service, the attacker can use it to impersonate the user. It is therefore essential that the
+authentication request is sent over TLS.
+
+However, TLS connections are susceptible to man-in-the-middle attacks using forged TLS certificates,
+when users ignore warnings about invalid certificates, or due to malware. Such incidents have been
+observed in practice~\cite{Huang14, Adkins11}, so we would like to minimize the degree to which
+certificate validation needs to be trusted in Octokey.
+
+Some authentication methods such as SCRAM-SHA-1-PLUS~\cite{SCRAM} use \emph{channel binding} to
+prevent MITM attacks. For example, the \texttt{tls-unique} channel binding type works by hashing the
+handshake messages that established the TLS connection: in a direct connection, server and client
+obtain the same hash value, but if the connection was terminated and restarted by a MITM, the server
+and client's values differ. If the client incorporates this hash value into the authentication
+request, and the server checks that it equals the server-side view of the connection, then an
+authentication request is rendered invalid by the presence of a MITM.
+
+Origin-Bound Certificates (OBC)~\cite{Dietz12} generalize this idea to the web, creating a channel
+binding that is not tied to a particular TCP connection. When a client first connects to a
+particular domain name, it automatically creates a TLS client certificate (without any user
+interaction) and presents it to the server. This certificate does not have any authentication
+purpose, but the fingerprint of the certificate can be incorporated as channel identifier into an
+authentication request.
+
+While channel binding would yield a significant improvement in security, it would also make the
+protocol much harder to deploy, both on the client and on the server side. It would therefore likely
+have to be an optional extension.
+
+An alternative effort to prevent MITM is the Certificate Transparency project~\cite{CertTrans},
+which aims to strengthen trust in the PKI by providing a public audit log of issued certificates,
+and rejecting certificates that do not appear in the log. Certificate Transparency does not protect
+against attackers who have stolen a website's private key (or governments, which can obtain the
+private key with a court order), but it does prevent many other kinds of MITM attacks, so it may be
+sufficient.
