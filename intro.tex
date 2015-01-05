@@ -13,10 +13,10 @@ system with the following properties is desirable:
 
 \begin{enumerate}
 \item The system should minimize exposure to human error (such as falling for a phishing attack).
-Whilst human error is unavoidable, especially amongst non-technical users, the system should be
-designed so as to minimize the impact in the case of error.
+Even with education, human error cannot be avoided completely, so the system should be designed such
+that it minimizes the impact in case of an error.
 \item In case a device is lost or stolen, the user should be able to easily revoke any credentials
-stored on the device, to minimise the chances that an attacker can use a stolen device to gain
+stored on the device, to minimize the chances that an attacker can use a stolen device to gain
 access to other systems.
 \item It is not necessary, and often undesirable, for the system to authenticate the user as a
 physical person. Many services allow pseudonymous signup, which is desirable for reasons of privacy
@@ -27,7 +27,7 @@ authentication is performed at signup.
 of the third party (security compromise, going out of business, change of policies, etc).
 \item The system should be easy for end-users to install and use, and easy for service owners to
 deploy. Since user signup and user activity rates are important business metrics for many online
-services, the system should make signup and login extremely easy and enjoyable for users.
+services, the system should make signup and login \emph{easier} than using a password.
 \item Users should have the freedom to use the system on a variety of devices, including shared or
 public computers that are only partially trusted, whilst minimizing their exposure to attackers.
 For example, a user may choose log in to `unimportant' services (e.g. casual online games) on a
@@ -67,12 +67,11 @@ to an attacker running malware on the untrusted computer.
 
 \subsection{One-time passwords and two-factor authentication}
 
-One-time passwords (OTPs) offer a solution for users who want to log in to their accounts on
-untrusted or partially trusted devices. The user must download a list of one-time passwords on a
-trusted device, or register a cryptographic device that generates a pseudorandom sequence of OTPs,
-or register an email address or phone number to which OTPs can be sent on demand. Some services
-allow use of OTPs as sole authentication mechanism, while others use them in conjunction with a
-regular password (two-factor authentication).
+One-time passwords (OTPs) are a big security improvement over regular passwords. The user must
+download a list of one-time passwords on a trusted device, or register a cryptographic device that
+generates a pseudorandom sequence of OTPs, or register an email address or phone number to which
+OTPs can be sent on demand. Some services allow use of OTPs as sole authentication mechanism, while
+others use them in conjunction with a regular password (two-factor authentication).
 
 The advantage of OTPs is that the exposure to attacks is limited to a single service, and ends when
 the user clicks the logout button (assuming the session is correctly invalidated on the server, and
@@ -191,10 +190,3 @@ if it is significantly more secure.
 It is conceivable that in future, authentication modules will be ubiquitously built into devices, so
 that users can to use them without the friction of a special-purpose authenticator device. However,
 we seek a solution that can be deployed today, without waiting for a hardware upgrade cycle.
-
-% https://www.schneier.com/blog/archives/2014/09/security_of_pas.html
-% https://crypton.io/
-% https://www.lightbluetouchpaper.org/2014/10/02/pico-part-iv-somethings-you-have/
-% http://news.engineering.utoronto.ca/bionym-raises-14-million-wearable-password-replacing-tech/
-% https://www.digits.com/
-% http://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-817.pdf (already in Papers)

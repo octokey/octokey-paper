@@ -2,9 +2,9 @@
 
 Octokey is a user authentication protocol designed to meet the goals stated in the introduction. It
 aims to provide good security in a software-only configuration, with cryptographic hardware modules
-being an optional extra. It strives to be a \emph{trust-free} protocol: it is completely
-decentralised, there is no dependency on any identity provider, and the extent to which PKI
-certificate authorities need to be trusted is minimised as far as possible.
+being an optional enhancement. It strives to be a \emph{trust-free} protocol: it is completely
+decentralized, there is no dependency on any identity provider, and the extent to which PKI
+certificate authorities need to be trusted is minimized as far as possible.
 
 The basic operation of Octokey is inspired by SSH public key authentication, which is widely used
 for shell access to remote servers. When using Octokey for the first time, a user must generate a
@@ -45,8 +45,8 @@ $(s, c, u, r, n, e)$. The authentication request is sent to the server as part o
 over TLS, and is handled at the application layer. The server can verify the authentication request
 by checking that all of the following are true:
 \begin{itemize}
-\item $m^d \mod n$ is a valid PKCS\#1 signature of the values $(c, u, r)$, checked against the
-public key $(n, e)$.
+\item $s$ is a valid PKCS\#1 signature of the values $(c, u, r)$, checked against the public key
+$(n, e)$.
 \item $c$ is a valid challenge issued by this service, has not been used for login before, and is
 not older than some maximum age. This prevents replay attacks.
 \item $u$ is a valid URL for this service. A login request for an unknown URL must be rejected.
@@ -65,9 +65,9 @@ $(n, d, e)$ would need to be copied to each of those devices. If any of those de
 compromised, and an attacker can break the human-to-machine authentication step (perhaps due to a
 weak password on the private key), the attacker could gain access to all of a user's accounts.
 
-To mitigate this risk, we ensure that the private exponent $d$ is never stored on any device.
+To mitigate this risk, we ensure that the private exponent $d$ is never stored on any one device.
 Instead, we split it into key fragments that are distributed amongst the user's devices. We use the
-\emph{mediated RSA} (mRSA) scheme proposed by Boneh et al.~\cite{Boneh01} which uses the fact that
+\emph{mediated RSA} (mRSA) scheme~\cite{Boneh01} which is based on the fact that
 $$s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n$$ provided that $d = d_a + d_b \mod \phi(n)$.
 
 If two devices $a$ and $b$ each have a key fragment $d_a$ and $d_b$ respectively, and those
@@ -79,29 +79,24 @@ $H(c, u, r)^{d_b} = m^{d_b}$ and returns that value to $a$. Then $a$ can calcula
 $s = m^{d_a} m^{d_b}$ by using its own key fragment $d_a$ and the value returned by $b$, and thus
 log in.
 
-This scheme ensures that the user can revoke a device's login capability if it is lost, stolen or
-compromised: every device that is paired with the lost device can be instructed to delete the key
-fragment corresponding to the lost device. When the paired fragments are deleted, the key fragments
-on the lost device become useless. Thus, even if the human-to-machine authentication is weak, not
-all is lost: the user only needs to revoke the lost device's key fragments faster than an attacker
-can break the human-to-machine authentication.
+If a device is lost, stolen or compromised, this scheme allows the user to revoke that device's
+login capability: every device that is paired with the lost device must be instructed to delete the
+key fragment corresponding to the lost device. When all the paired fragments have been deleted, the
+key fragments on the lost device become useless. Thus, even if the human-to-machine authentication
+is weak, not all is lost: the user only needs to revoke the lost device's key fragments faster than
+an attacker can break the human-to-machine authentication.
 
 A key could also be split into more than two fragments, which would protect against the case where
 an attacker manages to steal two or more devices. However, this comes at the cost of a more
 cumbersome user experience, so we concentrate on the two-fragment case for now.
 
-We expect that users have at least three devices (e.g.\ a laptop, a smartphone and a remote store --
-see below), that each device is paired with each of the others, and that each pairing uses
-different, randomly selected key fragments. If the user has $k$ devices, they can lose up to $k-2$
-devices and still be able to log in to services without resorting to a backup.
-
 \subsection{Remote key fragment store}
 
 Authenticating by using paired physical devices (e.g.\ a laptop and a smartphone) yields a similar
 user experience to current 2-factor authentication solutions, whereby the user must fetch the phone
-from their pocket, launch the appropriate app, and perform some kind of handshake. This is possible,
-but distinctly less convenient for users than typing a password, so it is not the simple user
-experience we are looking for.
+from their pocket, launch the appropriate app, and perform some kind of handshake. This is
+possible, but distinctly less convenient for users than typing a password, so it is not the simple
+user experience we are looking for.
 
 However, there is a simple solution within the mRSA framework: one of the user's `devices' may be a
 remote service on the internet. This service stores key fragments that are paired with each of the
@@ -111,65 +106,11 @@ device -- the coordination with the remote key fragment store happens automatica
 scenes.
 
 The key fragment store need only be partially trusted. It cannot authenticate as the user without
-the cooperation of one of the user's physical devices. From the point of view of a service verifying
-the signature on an authentication request, the key fragment store does not even exist (unlike a
-federated login system, where the relying party must trust the identity provider). The user only
-needs to trust the key fragment store to not collude with attackers who steal devices, and to delete
-key fragments when the user requires key revocation.
+the cooperation of one of the user's physical devices. The user only needs to trust the key fragment
+store to not collude with attackers who steal devices, and to delete key fragments when the user
+requires key revocation.
 
-TODO Prevent denial of service due to rate limiting or due to an attacker revoking a user's active
-devices.
-
-\section{Key distribution}
-
-To provision a new device for a user (i.e. to pair it with their existing devices), we need to
-generate a new key split $(d_{i+1,a}, d_{i+1,b})$ such that
-$d_{i+1,a} + d_{i+1,b} = d_{i,a} + d_{i,b} \mod \phi(n)$, without reassembling the entire private
-exponent $d$ on any single device (and thus risking it being stolen), and without knowing $\phi(n)$.
-
-Say the user has two existing devices $a$ and $b$, storing $d_{i,a}$ and $d_{i,b}$ respectively. We
-now want to introduce a new device $c$ and pair it with $a$. To this end, $c$ generates a uniformly
-distributed random number $d_{i+1,c}$ with $0 < d_{i+1,c} < 2^n$, and another uniformly distributed
-random number $g$ with $0 < g < d_{i+1,c}$.
-
-By exchanging a sequence of messages, the devices can arrive in the desired state. The algorithm
-will be described in the full paper.
-
-\subsection{Key rotation}
-\subsection{Multiple keypairs per user}
-\subsection{Security levels}
-\subsection{Device-to-device communication}
-\subsection{Threats}
-Undetected malware on a compromised machine can secretly log in to the user's services. If it's not
-noticed, it can't be revoked. But that is true of any software-based solution; only dedicated
-cryptographic hardware can prevent this, and we don't want to rely on hardware, as discussed in the
-introduction.
-
-\subsection{Channel binding}
-
-Question: how to bind the Octokey signature to the TLS channel in a mobile app, where the TLS
-connection will probably get torn town when switching to the Octokey app? Set up OBC first (before
-login)?
-
-Origin-Bound Certificates (OBC)~\cite{Dietz12} should be used to protect the session cookie from
-MITM attackers.
-
-Note that channel binding does not protect against all MITM attack scenarios. For example, in an
-e-commerce setting, an attacker who has stolen the service's private key, or who has fraudulently
-obtained a certificate from a CA trusted by the user's browser, can still impersonate the service.
-If the user does not notice the impersonation, and enters their credit card number to make a
-purchase, the attacker is able to steal the credit card number. In situations like these -- where
-the user is providing confidential information to the service -- the PKI still needs to be trusted.
-
-However, in situations where the flow of confidential information is from the service to the
-authenticated user, channel binding is an effective additional protection against MITM attacker
-trying to steal that information.
-
-Another attack vector is via JavaScript injected into the user's browser by a MITM attacker. Any
-code that executes within the context of a document in the browser has full access to the contents
-of that document. A page that is served to an authenticated user may download JavaScript code on
-separate TLS connections, for example from a content delivery network (CDN). If a MITM attacker is
-able to impersonate the CDN, they can inject arbitrary JavaScript into the browser.
-
-To prevent this, the page should not directly execute JavaScript that is downloaded. Instead, it
-should fetch JavaScript from the server using XMLHttpRequest over an authenticated TLS connection. 
+From the point of view of an online service, the key fragment store does not even exist: a service
+simply verifies the RSA signature on an authentication request, and does not care how that signature
+was constructed. This is in contrast to federated login systems, where the relying party must trust
+the identity provider.
