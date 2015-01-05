@@ -114,3 +114,55 @@ From the point of view of an online service, the key fragment store does not eve
 simply verifies the RSA signature on an authentication request, and does not care how that signature
 was constructed. This is in contrast to federated login systems, where the relying party must trust
 the identity provider.
+
+\subsection{Rate limiting password guesses}
+
+Besides enabling key revocation, mRSA can also be used to strengthen the human-to-machine
+authentication step against offline attacks.
+
+For example, say the key fragment on a device is encrypted with a symmetric key derived from a
+password.\footnote{If the encryption uses a block cipher, the key fragment must be padded with
+random bits up to the block size. Padding with zeros would leak information on whether a password
+guess was correct.} Consider an attacker who has stolen this encrypted fragment. In order to
+brute-force the password, the attacker needs a way of determining whether a password guess is
+correct. However, a key fragment is just a uniformly distributed random number; by itself, the
+correctly decrypted key fragment is indistinguishable from the garbage that results from trying to
+decrypt with the wrong password.
+
+Assuming the attacker has no other key fragments, they can only determine whether the password guess
+was correct by communicating with the remote key fragment store and testing whether they are able to
+construct a valid PKCS\#1 signature. This gives us an opportunity to rate-limit password guessing
+attempts: if the remote store receives too many requests based on an incorrect password, it can
+block further attempts and advise the user to revoke the device pairing.
+
+In order to achieve this, we must design the protocol such that an attacker must communicate with
+the remote store for every password attempt, but without revealing the password or the decrypted key
+fragment to the remote store. We can do this as follows:
+
+Say the key fragment $d_a$ has been encrypted with password $\mathit{pass}$, and the attacker has
+stolen the encrypted fragment
+$$\mathit{efrag} = \mathrm{encrypt}(\mathrm{PBKDF2}(\mathit{pass}), d_a).$$
+The attacker now guesses $\mathit{pass}^\prime$ and computes a guess $d_a^\prime$ of the plaintext:
+$$d_a^\prime = \mathrm{decrypt}(\mathrm{PBKDF2}(\mathit{pass}^\prime), \mathit{efrag})$$
+To check whether $d_a^\prime = d_a$ the attacker needs to contact the remote store where $d_b$ is
+held. We previously said that a signing request to the store consists of $(c, u, r)$. We now extend
+this to require an additional parameter:
+$$\left(c, u, r, H(H(c, u, r))^{d_a^\prime}\right)$$
+The additional parameter allows the store to verify whether the client's $d_a^\prime$ is correctly
+decrypted, without revealing $d_a^\prime$ or the password. The store simply uses its own $d_b$ to
+compute $$H(H(c, u, r))^{d_a^\prime}H(H(c, u, r))^{d_b}$$ and checks whether the result is a valid
+PKCS\#1 signature for the user's public key $(n, e)$.
+
+If the signature is valid, the store computes $H(c, u, r)^{d_b}$ as before, and returns it to the
+client. If the signature is not valid, the store returns ``bad signature''. The attacker learns that
+the password guess $\mathit{pass}^\prime$ was incorrect, but otherwise nothing is revealed that
+would help them guess the password.
+
+The values $(c, u, r)$ are hashed twice so that the store cannot use the signature to make any
+authentication requests on behalf of the user.
+
+This protection only works if the attacker does not have any knowledge of previous requests to the
+store. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a response) for any $x$, they can
+brute-force the password without contacting the remote store, and thus circumvent the rate-limiting.
+It is therefore important that communication with the remote store is protected from eavesdropping
+(using TLS) and is not logged on the device.
