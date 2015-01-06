@@ -1,4 +1,68 @@
-\section{Key distribution}
+\section{Inter-device communication}\label{sec:interdevice}
+
+Octokey assumes that the user has multiple internet-connected devices: two at minimum (one physical
+device and one remote key fragment store), but likely several more (desktop computer, laptop,
+smartphone, tablet, game console, television, automobile, etc).
+
+We assume that users want to be able to access all of their services on any one of their physical
+devices (devices with partial access to the user's services are discussed in
+section~\ref{sec:delegation}). Thus, each physical device should be paired at minimum with the
+remote key fragment store. Some physical devices may also be paired with each other, to provide
+redundancy in case of a failure of the remote store (discussed in section~\ref{sec:threat}).
+
+The system should make it easy to add new devices to the user's set of trusted devices, and to
+revoke any devices which are lost or no longer in use. It may also provide convenience features,
+such as synchronizing the list of usernames for all of a user's services, so that they can be
+autofilled in login forms. In order to do this, Octokey needs a mechanism for the user's devices to
+synchronize with each other.
+
+\subsection{Communication protocol}
+
+First, we need to be able to establish a secure point-to-point communication channel between any two
+of the user's devices (treating the remote store as one of the devices). The channel must provide
+secrecy and integrity, so that an attacker cannot eavesdrop or modify communcation between devices.
+It must also prevent spoofing, so that an attacker cannot impersonate a device.
+
+TLS~\cite{TLS} meets these requirements. Each device generates its own private key and self-signed
+certificate, which are used only for inter-device communication and are independent from the mRSA
+key fragments. One device then connects to another and performs a TLS handshake, using the devices'
+certificates as client and server certificates for mutual authentication.
+
+This approach does not require any PKI or certificate authorities: public key fingerprints are
+exchanged out-of-band when devices are first discovered (see section~\ref{sec:newdevice}), so each
+device can check whether its peer is the device that it claims to be. It is not important which
+device acts as client or server in this channel, as the relationship between the devices is
+symmetric.
+
+However, there is a practical problem: it can be difficult to establish a peer-to-peer TCP
+connection between two arbitrary devices, as they may be on different networks, behind firewalls,
+and they may often be offline -- and rarely online at the same time. Thus, rather than performing
+TLS over TCP, we propose using an alternative transport layer in the form of a store-and-forward
+service.
+
+The store-and-forward service is a web service that can be reached from all devices (it may be
+co-located with the remote key fragment store). It accepts messages from one device and relays them
+to another device: if the recipient is online, the messages are forwarded immediately, otherwise
+they are stored until the recipient is next online. The messages are records of the TLS Record
+Protocol~\cite{TLS}, so two devices can perform a TLS handshake and establish a secure channel by
+sending each other messages via the store-and-forward service. The service needs to be highly
+available, but it does not need to be trusted for security purposes.
+
+If devices are only occasionally online, the round-trip-times across this ``network connection'' may
+be measured in days, so timeouts may need to be adjusted accordingly. However, once this channel has
+been set up, it can remain open indefinitely (with occasional renegotiation), even across device
+reboots.
+
+\subsection{Data synchronization}\label{sec:devicesync}
+
+We can now use these secure point-to-point channels between devices to create a mesh of connections
+amongst the user's devices. It is not necessary to have a communication channel between every pair
+of devices, but a fairly densely connected graph of channels is desirable, so that any message from
+one devices reaches the other devices fairly quickly.
+
+\subsection{Adding a new device}\label{sec:newdevice}
+
+\subsection{Key distribution}
 
 To provision a new device for a user (i.e. to pair it with their existing devices), we need to
 generate a new key split $(d_{i+1,a}, d_{i+1,b})$ such that
