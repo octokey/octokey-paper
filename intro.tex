@@ -118,7 +118,7 @@ For these reasons, OpenID login is typically only accepted by small services; ma
 rarely act as a relying party in OpenID. The competitive dynamic between services makes it unlikely
 that a user will ever be able to use a single identity provider across all services.
 
-\subsection{Client certificates}
+\subsection{Client certificates}\label{sec:clientcerts}
 
 TLS~\cite{TLS} provides a mechanism for a client to authenticate itself to the server using a X.509
 certificate. The server may specify the certificate authority from which it is willing to accept
@@ -134,33 +134,32 @@ the certificates are widely used for authentication by banks, utility companies 
 organisations in Estonia.~\cite{Parsovs14}
 
 Client certificate authentication can be performed by hardware tokens, e.g. using the PKCS \#11
-\emph{Cryptoki} API. This provides some protection against private keys being stolen by malware.
+\emph{Cryptoki} API. This provides some protection against private keys being stolen by malware, but
+it is inconvenient for users (see section~\ref{sec:hardware}).
 
 Despite their advantages, client certificates are not widely used for consumer internet services.
 Problems include:
 \begin{itemize}
-\item The user experience of installing and managing certificates is unfriendly in most web
-browsers.
-\item Web browsers do not offer a consistent mechanism for logging out or switching to another
-account after logging in with a client certificate.
-\item In native apps (both mobile and desktop), support for TLS certificates is patchy.
-\item A service provider must decide which CAs to trust, or it must itself act as a CA in order to
-avoid a trust dependency on a third party.
-\item Pseudonymous usage of services is difficult if the certificate is issued by an external CA.
-\item The certificate (including identifying personal details such as the user's real name) is sent
-unencrypted during the TLS handshake, making it visible to passive network attackers.\footnote{This
-can be mitigated by performing the authentication handshake during a TLS renegotiation, but that has
-a negative performance impact, and makes the server configuration more complicated.}
-\item Certificate validation can be difficult to deploy on the server, as TLS termination is
-typically performed on a different server from the application server running business logic.
-\item Certificate validation can be computationally expensive, creating a risk of denial of
-service.~\cite{Parsovs14}
-\item Revocation of certificates (which requires CRLs or OCSP~\cite{OCSP}) is easy to get wrong, and
-a slowdown or outage of OCSP servers can impact a service's availability (creating another
-third-party dependency).
+\item The user interface for installing and managing certificates is unfriendly in most web
+browsers and operating systems. Services are not able to customize the look and feel of the signup
+and authentication process.
+\item It is not possible to be logged in to several accounts on one service at the same time. Even
+logging out and switching to another account is awkward.
+\item There is no good solution for authenticating on multiple devices, or even on multiple
+sandboxed applications on the same device. Either private keys must be copied to each device
+(increasing the risk of key theft), or each device must have its own keys (in which case, every time
+the user acquires or disposes of a device, they must must manually update each of their services to
+reflect the certificates for their current set of devices -- very laborious if they use hundreds of
+services).
+\item Certificates issued by an external CA typically contain personally identifying information,
+such as a real name or email address. In order to enable pseudonymous usage, and to remove the
+third-party trust dependency, a service provider must itself act as a CA.
+\item Revocation of certificates (which requires CRLs or OCSP~\cite{OCSP}) is often not implemented
+correctly. If OCSP servers are slow or unavailable, a service provider must either fail all logins
+(unacceptable in practice), or skip revocation checking (allowing stolen certificates to be used).
 \end{itemize}
 
-\subsection{Private keys in secure hardware}
+\subsection{Private keys in secure hardware}\label{sec:hardware}
 
 The \emph{Fast Identity Online} (FIDO) Alliance, an industry consortium, has drafted a specification
 for new user authentication protocol.~\cite{FIDOOverview, FIDOSpec} Its basic mechanism is that the
@@ -182,11 +181,11 @@ deployment seems remote.
 
 Whilst the security characteristics of hardware modules are appealing, the user experience is quite
 inconvenient at present. For example, a USB-based module cannot be used on a mobile device that has
-no USB port. A small number of high-value services (such as online banking) can afford to
-significantly inconvenience users in the name of security, but for the majority of online services,
-any authentication method that is less convenient than a password is unlikely to gain adoption, even
-if it is significantly more secure.
+no USB port. If the cryptographic module is built into the device, the authentication capability is
+not portable across devices.
 
-It is conceivable that in future, authentication modules will be ubiquitously built into devices, so
-that users can to use them without the friction of a special-purpose authenticator device. However,
-we seek a solution that can be deployed today, without waiting for a hardware upgrade cycle.
+A small number of high-value services (such as online banking) can afford to significantly
+inconvenience users in the name of security, but for the majority of online services, any
+authentication method that is less convenient than a password is unlikely to gain adoption, even if
+it is significantly more secure. We seek a solution that can be deployed today, which does not
+inconvenience users, and which does not require new hardware to be developed.
