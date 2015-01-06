@@ -1,0 +1,53 @@
+\section{Threat model and trade-offs}\label{sec:threat}
+
+Undetected malware on a compromised machine can secretly log in to the user's services. If it's not
+noticed, it can't be revoked. But that is true of any software-based solution; only dedicated
+cryptographic hardware can prevent this, and we don't want to rely on hardware, as discussed in the
+introduction.
+
+For software-only implementations of Octokey, we assume that there is no malware running on devices
+that store key fragments. If an attacker can read the key fragment on a device and also break the
+human-to-machine authentication step (e.g. by keylogging the password with which the key fragment is
+encrypted), then the attacker is almost indistinguishable from a legitimate user.
+
+The key fragment store is likely to be an attack target. If it is compromised, all users need to
+re-pair with a new key fragment store (otherwise the ability to revoke keys is lost). For this
+reason, the protocol should allow forced re-pairing within a deadline.
+
+Denial of service attacks on the key fragment store are also likely.
+
+Pair all physical devices with each other? Advantage: redundancy in case remote store has an outage.
+Disadvantage: if an attacker steals two paired devices (e.g. taking both your laptop and your
+smartphone in a robbery), mRSA revocation is not possible, so the human-to-machine authentication
+step is the only remaining protection of the private key.
+
+Does revocation still work if the user has only one device (besides the remote service)?
+Need to assume everyone has two physical devices?
+
+Does the remote key fragment store need to authenticate signing requests?
+
+The remote key fragment store sees plaintext URLs and challenges, so it could track a user's
+activity. Is this ok? Advantage: allows more granular limiting of abuse, e.g. rate limiting login
+attempts on one website without affecting other websites.
+
+The user should print off their entire private key, and store it in a safe place (e.g. bank vault).
+This gives them a recovery method in case all of their devices are simultaneously destroyed (house
+burns down).
+
+Question: how does Octokey know that a certain website URL is the same service as a certain iOS
+bundle ID, which is the same service as an Android app signed with a certain public key?
+
+\subsection{Denial of service}
+
+Prevent denial of service due to rate limiting or due to an attacker revoking a user's active
+devices.
+
+In the worst case, if an attacker manages to get the entire private key (e.g. by stealing or
+compromising two devices that are paired, and breaking the human-to-machine authentication step),
+the user's last resort is to generate a new key and update their accounts on all services, adding
+the new public key and removing the old one. Unfortunately, the same key-swapping can be performed
+by the attacker to lock out the legitimate user.
+
+Therefore, perhaps changing a user's public key on a service should require an additional hurdle,
+e.g. using a recovery key that is only stored on paper but not electronically? Or a key that is
+split 3 ways? But that would make key rotation difficult.
