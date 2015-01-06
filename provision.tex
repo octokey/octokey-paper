@@ -18,3 +18,50 @@ will be described in the full paper.
 \subsection{Security levels}
 \subsection{Device-to-device communication}
 
+% Sync login history across devices, and compare to login history reported by server, to detect
+% use of a stolen key
+
+\subsection{Delegated login by mobile device}\label{sec:delegation}
+
+A user should be able to authenticate with services on a semi-trusted device, for example a game
+console at a friend's home, without having to provision key fragments for that device (and thus
+giving the device full access to all of the user's accounts). To this end, we use the fact that a
+signed Octokey authentication request is like a one-time password: it can be given to another device
+in order to authorize one-off access to one particular service.
+
+By logging in, the semi-trusted device exchanges the signed authentication request for a session
+identifier (e.g. a cookie), which is destroyed when the user logs out, or after a timeout. In cases
+where the user wants to give a device long-lived access to one service, the device can obtain an
+OAuth~\cite{OAuth} token from the service. This is standard use of OAuth and does not require any
+special support from Octokey.
+
+The question is then how to get the signed authentication request onto the device that needs it. We
+propose the following flow:
+
+\begin{enumerate}
+\item 
+\end{enumerate}
+
+In cases where an internet connection is not available on both devices, Bluetooth or NFC can be
+used.
+
+Browser and phone meet at rendezvous point (URL in QR code) / communicate over rendezvous channel
+
+We must assume that the contents of the barcode can be read by an attacker: it may be
+electromagnetically snooped~\cite{Kuhn05}, or an attacker may simply point a camera at the victim's
+screen. In order to establish a secure channel between the smartphone and the desktop browser, it is
+therefore not appropriate to embed a symmetric private key in the barcode.
+
+The browser has a separate keypair, with the private key identifying the browser itself (not the
+user). The QR code contains the URL of the rendezvous point, and the fingerprint of the browser's
+public key. When the rendezvous channel is established, the browser sends a message to the client
+signed with the browser's private key; and the client checks the signature, and checks that the
+fingerprint of the public key that made the signature matches the fingerprint in the QR code. Thus
+man-in-the-middling would require an attacker to actually modify the on-screen QR code, rather than
+just eavesdrop it. If the attacker has enough access to the device that they are able to manipulate
+what is displayed on the screen, then they can impersonate the user after logging in anyway (so all
+bets are off for that user account on that site). The user still needs to make sure that they are
+not being tricked into logging in to a different site from the one they thought they were logging in
+to; this can be done by displaying the URL of the login page on the mobile phone when the user is
+prompted to approve the authentication request. If the URL is not what the user was expecting, they
+must decline the authentication request.
