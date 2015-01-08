@@ -66,7 +66,7 @@ compromised, and an attacker can break the human-to-machine authentication step 
 weak password on the private key), the attacker could gain access to all of a user's accounts.
 
 To mitigate this risk, we ensure that the private exponent $d$ is never stored on any one device.
-Instead, we split it into key fragments that are distributed amongst the user's devices. We use the
+Instead, we split it into key fragments that are distributed among the user's devices. We use the
 \emph{mediated RSA} (mRSA) scheme~\cite{Boneh01} which is based on the fact that
 $$s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n$$ provided that $d = d_a + d_b \mod \phi(n)$.
 
@@ -121,13 +121,14 @@ Besides enabling key revocation, mRSA can also be used to strengthen the human-t
 authentication step against offline attacks.
 
 For example, say the key fragment on a device is encrypted with a symmetric key derived from a
-password.\footnote{If the encryption uses a block cipher, the key fragment must be padded with
-random bits up to the block size. Padding with zeros would leak information on whether a password
-guess was correct.} Consider an attacker who has stolen this encrypted fragment. In order to
-brute-force the password, the attacker needs a way of determining whether a password guess is
-correct. However, a key fragment is just a uniformly distributed random number; by itself, the
-correctly decrypted key fragment is indistinguishable from the garbage that results from trying to
-decrypt with the wrong password.
+password.\footnote{This discussion also applies to other human-to-machine authentication methods,
+for example an encryption key that is derived from biometric measurements.} Consider an attacker who
+has stolen this encrypted fragment. In order to brute-force the password, the attacker needs a way
+of determining whether a password guess is correct. However, a key fragment is just a uniformly
+distributed random number; by itself, the correctly decrypted key fragment is indistinguishable from
+the garbage that results from trying to decrypt with the wrong password.\footnote{If the encryption
+uses a block cipher, the key fragment must be padded with random bits up to the block size. Padding
+with zeros would leak information on whether a password guess was correct.}
 
 Assuming the attacker has no other key fragments, they can only determine whether the password guess
 was correct by communicating with the remote key fragment store and testing whether they are able to

@@ -10,18 +10,18 @@ section~\ref{sec:delegation}). Thus, each physical device should be paired at mi
 remote key fragment store. Some physical devices may also be paired with each other, to provide
 redundancy in case of a failure of the remote store (discussed in section~\ref{sec:threat}).
 
-The system should make it easy to add new devices to the user's set of trusted devices, and to
+The system should make it easy to enroll new devices to the user's set of trusted devices, and to
 revoke any devices which are lost or no longer in use. It may also provide convenience features,
 such as synchronizing the list of usernames for all of a user's services, so that they can be
 autofilled in login forms. In order to do this, Octokey needs a mechanism for the user's devices to
 synchronize with each other.
 
-\subsection{Communication protocol}
+\subsection{Communication protocol}\label{sec:channels}
 
 First, we need to be able to establish a secure point-to-point communication channel between any two
 of the user's devices (treating the remote store as one of the devices). The channel must provide
 secrecy and integrity, so that an attacker cannot eavesdrop or modify communcation between devices.
-It must also prevent spoofing, so that an attacker cannot impersonate a device.
+It must also prevent spoofing, so that an attacker cannot impersonate a device or MITM a channel.
 
 TLS~\cite{TLS} meets these requirements. Each device generates its own private key and self-signed
 certificate, which are used only for inter-device communication and are independent from the mRSA
