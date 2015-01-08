@@ -105,7 +105,9 @@ using well-known certificate authorities (or a pinned public key fingerprint emb
 application).
 \item The application splits the private exponent $d = d_1 + d_2$ such that $d_1$ is a uniformly
 distributed random integer with $0 < d_1 < d$. The device stores $d_1$ locally, sends $d_2$ to the
-key fragment store, and destroys $d$.
+key fragment store.
+\item The user has the option of printing off the private key, as a last-resort backup in case all
+of their devices are lost (see section~\ref{sec:threat}). Then the application deletes $d$.
 \end{enumerate}
 
 \subsection{Enrolling a new device}\label{sec:newdevice}

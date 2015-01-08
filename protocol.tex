@@ -57,7 +57,7 @@ similar-looking URL and tricks the user into logging in.
 If the authentication request is successfully verified, the user is logged in by the server in the
 usual manner, for example by setting an appropriate session cookie.
 
-\subsection{Protection against key theft}
+\subsection{Protection against key theft}\label{sec:revocation}
 
 Many users have multiple devices (e.g. laptop, smartphone, tablet, game console) on which they need
 to be able to log in to their accounts with online services. As described above, the private key
@@ -90,7 +90,7 @@ A key could also be split into more than two fragments, which would protect agai
 an attacker manages to steal two or more devices. However, this comes at the cost of a more
 cumbersome user experience, so we concentrate on the two-fragment case for now.
 
-\subsection{Remote key fragment store}
+\subsection{Remote key fragment store}\label{sec:fragmentstore}
 
 Authenticating by using paired physical devices (e.g.\ a laptop and a smartphone) yields a similar
 user experience to current 2-factor authentication solutions, whereby the user must fetch the phone
@@ -115,7 +115,7 @@ simply verifies the RSA signature on an authentication request, and does not car
 was constructed. This is in contrast to federated login systems, where the relying party must trust
 the identity provider.
 
-\subsection{Rate limiting password guesses}
+\subsection{Rate limiting password guesses}\label{sec:ratelimit}
 
 Besides enabling key revocation, mRSA can also be used to strengthen the human-to-machine
 authentication step against offline attacks.

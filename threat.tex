@@ -1,14 +1,65 @@
 \section{Threat model and trade-offs}\label{sec:threat}
 
-Undetected malware on a compromised machine can secretly log in to the user's services. If it's not
-noticed, it can't be revoked. But that is true of any software-based solution; only dedicated
-cryptographic hardware can prevent this, and we don't want to rely on hardware, as discussed in the
-introduction.
+In this section, we discuss the assumptions we have made with regard to attackers' capabilities,
+some aspects which require careful implementation, and some areas where different concerns need to
+be traded off against each other.
 
-For software-only implementations of Octokey, we assume that there is no malware running on devices
-that store key fragments. If an attacker can read the key fragment on a device and also break the
-human-to-machine authentication step (e.g. by keylogging the password with which the key fragment is
-encrypted), then the attacker is almost indistinguishable from a legitimate user.
+\subsection{Malware and untrusted software}
+
+Most authentication schemes in a consumer context are based on the principle that once a user has
+authenticated, they have unlimited access to their account: using different credentials for
+different actions is considered too inconvenient.\footnote{An exception are some online banking
+websites, which require explicit authorization of each payment action, using a hardware token.}
+
+Consequently, once a user has authenticated with a service on a device, the software on that device
+can in principle do anything it wants to the user account. That is true no matter which
+authentication method is used: if there is malware which can read files, log keystrokes and steal
+session cookies, or if an attacker can obtain remote root access to a device, any services in use on
+that device can be compromised.
+
+With Octokey, there is the additional risk of the device's private key (for inter-device
+communication) and mRSA key fragment being stolen. If the device has a built-in hardware security
+module, the actual keys are protected, but malware can nevertheless sign arbitrary authentication
+requests, because it is almost indistinguishable from legitimate user software. Thus, if malware is
+detected on a device, its keys must immediately be revoked.
+
+In sandboxed environments (e.g. websites in web browsers, apps on some mobile OSes), mutually
+untrusting applications are somewhat protected from each other. In this case, there needs to be an
+explicit way of passing authentication requests between the Octokey application (which manages the
+keys) and the websites and apps that require authentication. This mechanism must be implemented
+carefully, ensuring that a website or application can only obtain a signed authentication request
+for its own URL, and not some other one.
+
+\subsection{Physical device theft and loss}
+
+We assume that the private key material on a device is protected by a human-to-machine
+authentication step, e.g. encrypted with a password. This is not much use against malware, but it
+does help against an attacker who physically steals a device (or a backup of a device's filesystem).
+In section~\ref{sec:ratelimit} we discussed a technique for strengthening this step against brute
+force and dictionary attacks.
+
+If the user has enrolled another device, they can use that device to revoke the stolen device. If
+the revocation happens before the human-to-machine authentication is broken, no harm is done. If the
+device is not revoked in time, the attacker can sign arbitrary authentication requests, and steal
+the key by enrolling another device and pairing it with the stolen device. The risk of key theft can
+be mitigated by prompting the user on several devices before enrolling another device (provided that
+the user has previously enrolled several devices).
+
+If an attacker steals two devices that are paired with each other, the risk of key theft is much
+greater, because the human-to-machine authentication is the only remaining protection: deleting key
+fragments from the remote store is not sufficient to prevent the attacker from recovering the key.
+This means there is a trade-off between security and reliability: pairing physical devices with each
+other provides redundancy in case the remote key fragment store is unavailable, but it increases the
+risk of the private key being stolen.
+
+Another risk is that the user may lose access to their services: perhaps an attacker who gains
+control of a device uses it to revoke the user's legitimate devices (thus preventing the user from
+stopping the attacker); perhaps the user has only enrolled one or two physical devices, and they are
+stolen simultaneously; perhaps the user's house burns down and all of their devices are lost. To
+allow recovery from such situations, we recommend that users print off their private key and store
+it in a safe place.
+
+\subsection{Key fragment store}
 
 The key fragment store is likely to be an attack target. If it is compromised, all users need to
 re-pair with a new key fragment store (otherwise the ability to revoke keys is lost). For this
@@ -78,6 +129,7 @@ software.
 
 \subsection{Key rotation}
 \subsection{Multiple keypairs per user}
+\subsection{Multi-way key splitting}
 \subsection{Security levels}
 
 % Sync login history across devices, and compare to login history reported by server, to detect
