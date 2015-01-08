@@ -37,6 +37,53 @@ burns down).
 Question: how does Octokey know that a certain website URL is the same service as a certain iOS
 bundle ID, which is the same service as an Android app signed with a certain public key?
 
+\subsection{2D barcode interception}\label{sec:barcode-intercept}
+
+In the flow for enrolling a new device (section~\ref{sec:newdevice}), and with delegated login
+(section~\ref{sec:delegation}), we proposed displaying a 2D barcode on the screen of one device, and
+scanning it with the camera of another. We cannot assume confidentiality of these barcodes: an
+attacker may snoop it electromagnetically~\cite{Kuhn05}, or simply point a camera at the victim's
+screen.
+
+An attacker can thus connect to the URL in the barcode, and enroll the new device to the attacker's
+account, instead of the user's own account as intended. With delegated login, the attacker can get
+the user to log in with the attacker's key rather than the user's own key. This does not compromise
+the user's key, but if the user logs in to the wrong account and doesn't realize it, they may
+inadvertently disclose sensitive information to the attacker.
+
+It is not clear whether this would be a problem in practice. If it is, a mutual authentication step
+could be added to the flows for enrolling a new device and for delegated authentication (for
+example, verifying a 2D barcode in the other direction). However, this makes the process more
+complicated for users, especially when trying to delegate authentication to a device which has no
+camera, so the additional verification step should probably be optional.
+
+\subsection{2D barcode phishing}\label{sec:barcode-phishing}
+
+When enrolling a new device or performing delegated authentication, we assume that an attacker
+cannot trick a user into scanning a different barcode from the one they intended --- i.e. we assume
+that the visual channel between the barcode-displaying and the barcode-scanning device provides
+integrity (but not confidentiality). If the attacker is able to manipulate what is displayed on
+screen, or somehow insert themselves into that channel, the user has bigger problems.
+
+However, a real risk is that a malicious website or app displays a barcode that originates from an
+attacker-controlled device, and tricks the user into scanning that barcode and granting the attacker
+unwanted access. In this scenario we must rely on well-written warning messages and user education
+to ensure the user really understands what they are doing.
+
+For users who have already set up multiple physical devices, as an additional safeguard against
+accidentally pairing with an attacker-controlled device, we can require that enrolling a new device
+requires user approval on a quorum (e.g. majority) of existing devices. This does not require
+additional cryptographic algorithms, but can simply be implemented as a policy in the Octokey
+software.
+
+\subsection{Key rotation}
+\subsection{Multiple keypairs per user}
+\subsection{Security levels}
+
+% Sync login history across devices, and compare to login history reported by server, to detect
+% use of a stolen key
+
+
 \subsection{Denial of service}
 
 Prevent denial of service due to rate limiting or due to an attacker revoking a user's active

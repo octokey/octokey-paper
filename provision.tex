@@ -53,42 +53,164 @@ be measured in days, so timeouts may need to be adjusted accordingly. However, o
 been set up, it can remain open indefinitely (with occasional renegotiation), even across device
 reboots.
 
+Besides this store-and-forward service, devices should support alternative transport mechanisms,
+such as direct TCP connections on a local network, Bluetooth or NFC. These may only occasionally be
+used, but they are good fallbacks so that the store-and-forward service does not become a single
+point of failure. The same TLS record protocol can be used over those transport layers.
+
 \subsection{Data synchronization}\label{sec:devicesync}
 
-We can now use these secure point-to-point channels between devices to create a mesh of connections
-amongst the user's devices. It is not necessary to have a communication channel between every pair
-of devices, but a fairly densely connected graph of channels is desirable, so that any message from
-one devices reaches the other devices fairly quickly.
+These point-to-point channels are used for exchanging mRSA signing requests and responses between
+devices. Moreover, we can use them for replicating information that we want stored on all devices:
+each of the user's physical devices maintains a local database containing public key fingerprints of
+all of the user's other devices (for mutual authentication of channels), configuration (e.g. URL of
+the key fragment server), information on which devices are paired (for key revocation purposes), a
+list of all the services they have logged in to (for username autofill), and so on.
 
-\subsection{Adding a new device}\label{sec:newdevice}
+Each of the user's physical devices should be able to read and modify this database, and any changes
+should be asynchronously propagated to the other devices. To this end, we can use the point-to-point
+channels of section~\ref{sec:channels} to create a mesh of connections among the user's devices
+(even between those which are not paired). It is not necessary to have a communication channel
+between every pair of devices, but a fairly densely connected graph of channels is desirable, so
+that any message from one device reaches the other devices fairly quickly, and so that the
+communication is resilient to device and channel failures.
 
-\subsection{Key distribution}
+Within this mesh network, we can use a \emph{gossip protocol} (also known as \emph{epidemic
+protocol}) \cite{Demers89} for disseminating database changes. \emph{Version vectors}
+\cite{ParkerJr83} can be used to efficiently detect data differences that need to be synchronized,
+and \emph{CRDTs}~\cite{Shapiro11} can automatically resolve any conflicts between concurrent
+database updates, without requiring user interaction. Every database change must be signed with the
+device key of the device on which it originated, so that any changes made on a stolen device can be
+rejected.
 
-To provision a new device for a user (i.e. to pair it with their existing devices), we need to
-generate a new key split $(d_{i+1,a}, d_{i+1,b})$ such that
-$d_{i+1,a} + d_{i+1,b} = d_{i,a} + d_{i,b} \mod \phi(n)$, without reassembling the entire private
-exponent $d$ on any single device (and thus risking it being stolen), and without knowing $\phi(n)$.
+Although the key fragment store is one of the user's `devices', it does not need a copy of this
+database, and it must not be allowed to make database updates. Only physical devices may
+authenticate with services on the user's behalf, and only physical devices may enroll additional
+trusted devices. This makes it safe for the key fragment store to be operated by a third party. To
+protect the user's privacy, if a copy of the database is stored on the key fragment store for backup
+purposes, it must be encrypted such that only the user's physical devices can restore it.
 
-Say the user has two existing devices $a$ and $b$, storing $d_{i,a}$ and $d_{i,b}$ respectively. We
-now want to introduce a new device $c$ and pair it with $a$. To this end, $c$ generates a uniformly
-distributed random number $d_{i+1,c}$ with $0 < d_{i+1,c} < 2^n$, and another uniformly distributed
-random number $g$ with $0 < g < d_{i+1,c}$.
+\subsection{Bootstrapping}\label{sec:bootstrap}
 
-By exchanging a sequence of messages, the devices can arrive in the desired state. The algorithm
-will be described in the full paper.
+When someone first starts using Octokey, they go through the following steps:
 
-\subsection{Key rotation}
-\subsection{Multiple keypairs per user}
-\subsection{Security levels}
-\subsection{Device-to-device communication}
+\begin{enumerate}
+\item The user installs the Octokey application on a physical device, and selects ``create new
+Octokey''.
+\item The application generates the user's RSA keypair $(n, d, e)$, as well as the keypair and
+self-signed certificate for that device.
+\item The application contacts a key fragment store of the user's choice (a default may be
+provided) over TLS, using its device certificate for client authentication, and verifying the server
+using well-known certificate authorities (or a pinned public key fingerprint embedded in the
+application).
+\item The application splits the private exponent $d = d_1 + d_2$ such that $d_1$ is a uniformly
+distributed random integer with $0 < d_1 < d$. The device stores $d_1$ locally, sends $d_2$ to the
+key fragment store, and destroys $d$.
+\end{enumerate}
 
-% Sync login history across devices, and compare to login history reported by server, to detect
-% use of a stolen key
+\subsection{Enrolling a new device}\label{sec:newdevice}
+
+When the user already has set up Octokey on one or more devices, and wishes to enroll another
+physical device (i.e. pair a new device with their existing devices), they proceed as follows:
+
+\begin{enumerate}
+\item The user installs the Octokey application on the new device, and selects ``set up this device
+to use your existing Octokey''.
+\item The application generates that device's keypair and self-signed certificate. It then registers
+itself at the store-and-forward service, using its device certificate for client authentication. The
+store-and-forward service allocates a URL at which this device can be reached, using the device's
+public key fingerprint as recipient identifier.
+\item The application on the device displays a 2D barcode on screen, containing an indicator that
+this is an enrollment request, the store-and-forward URL at which it can be reached, the device's
+public key fingerprint, and optionally information about other transport channels (e.g. Bluetooth)
+where it can be reached. The barcode must not contain any sensitive data, since it may be visible to
+eavesdroppers (see section~\ref{sec:barcode-intercept}).
+\item The user scans this barcode using the camera of their existing Octokey device. The application
+connects to the URL in the barcode, negotiates an end-to-end TLS connection and checks that the
+remote key fingerprint matches the one in the barcode.
+\item The existing Octokey device prompts the user whether they want to trust the device whose
+barcode they just scanned. If the user is already using multiple devices, the applications on those
+devices may additionally prompt the user.
+\item When sufficient user approvals have been obtained, the device that scanned the barcode
+registers the new device (including its public key fingerprint) in the database. This change is
+replicated to other devices, which may connect to the new device (adding it to the mesh network).
+\item The new device initiates the key re-pairing protocol (section~\ref{sec:pairing}) in order to
+obtain key fragments.
+\end{enumerate}
+
+This interaction flow assumes that the first physical device on which the user sets up their private
+key has a camera. This is plausible, since many laptops and smartphones come with built-in cameras
+today. In the case where no camera is available, the user can type in the contents of the barcode in
+textual form.
+
+Devices which are enrolled later do not require a camera, only a screen. For example, a game console
+or an automobile on-board computer may not have a camera, but they can nevertheless be enrolled if
+they have an internet connection.
+
+Bluetooth or NFC are less suitable for initiating device enrollment, because they carry a higher
+risk of accidentally enrolling the wrong device, including an attacker's device (see also
+section~\ref{sec:barcode-phishing}). However, once a device is enrolled, they can be used safely,
+because the devices know each others' fingerprints and can thus mutually authenticate.
+
+\subsection{Key re-pairing}\label{sec:pairing}
+
+Each mRSA pairing of devices requires the private exponent $d$ to be split in different ways:
+$d = d_1 + d_2 = d_3 + d_4 = \dots$ with $d_1 \neq d_2 \neq d_3 \neq d_4$ (all values are drawn from
+a uniform random distribution, so there is a very small probability that they might be equal).
+
+Say there are two existing devices: device $a$ stores key fragment $d_1$ and device $b$ stores key
+fragment $d_2$. When a new device $c$ is enrolled, and we want to pair it with device $a$, we need
+to generate new key fragments $d_3$ (stored on device $c$) and $d_4$ (stored on device $a$). We can
+do this as follows, without reassembling the entire private exponent $d$ on any single device (and
+thus risking it being stolen):
+
+\begin{enumerate}
+\item Device $c$ chooses a random integer $d_3$ from the uniform range $0 < d_3 < n$ (where $n$ is
+the RSA modulus).
+\item Device $c$ chooses a second random integer $k$ from the uniform range $0 < k < d_3$.
+\item Device $c$ sends $k$ to device $a$, and sends $(d_3 - k)$ to device $b$.
+\item Device $b$, where $d_2$ is stored, calculates $(d_2 - (d_3 - k))$ and sends it to device $a$.
+This number may be negative.
+\item Device $a$, where $d_1$ is stored, has now received $k$ and $(d_2 - (d_3 - k))$. It uses these
+to calculate $$d_4 = d_1 + (d_2 - (d_3 - k)) - k = d_1 + d_2 - d_3.$$
+\item If $d_4$ is positive, the algorithm was successful: device $a$ stores $d_4$ and we're done. If
+$d_4$ is negative, we start again from step 1, choosing new random numbers.
+\end{enumerate}
+
+The algorithm ensures that $d_3 + d_4 = d$, so $d_4$ is negative iff $d_3 > d$. However, since no
+device knows $d$, we cannot simply generate $d_3$ to be less than $d$, but we must retry with new
+random numbers until a suitable $d_3$ is found.
+
+A malicious device could use this algorithm to determine $d$ by binary search. However, there are
+also many other ways for a malicious device to reconstruct $d$, for example by pairing with a
+colluding device. Thus, we must trust the software on the user's physical devices, and use the fact
+that a device can only initiate the pairing process after it has been authorized by the user. We
+also prohibit the remote key fragment store from initiating the re-pairing process.
+
+\subsection{Number of retries}\label{sec:retries}
+
+The key re-pairing algorithm in section~\ref{sec:pairing} requires a potentially unbounded
+number of retries. To avoid excessive waiting times for the user, we want to keep the number of
+retries fairly small.
+
+The number of retries $R$ is a geometrically distributed random variable with an expected value of
+$\frac{n}{d}-1$. This means that if the private exponent $d$ is significantly smaller than the
+modulus $n$, the number of retries can be high.
+
+We therefore suggest that when the private key is first generated, it must be greater than some
+threshold, e.g. $d \ge \frac{n}{16}$. With this restriction, a worst-case key would require 15
+retries on average, and would have an approximately 0.1\% risk of requiring more than 100 retries.
+Most keys would require significantly fewer retries.
+
+Although this restriction would exclude 1/16th of the possible keyspace, with a 2048-bit key this is
+equivalent to reducing the key size to $\log_2(2^{2048} - 2^{2044}) \approx 2047.9$ bits. It seems
+unlikely that a loss of 0.1 bits would significantly harm the strength of the algorithm, but in any
+case the cryptanalytic consequences of such a key restriction need to be studied carefully.
 
 \subsection{Delegated login by mobile device}\label{sec:delegation}
 
 A user should be able to authenticate with services on a semi-trusted device, for example a game
-console at a friend's home, without having to provision key fragments for that device (and thus
+console at a friend's home, without having to generate key fragments for that device (and thus
 giving the device full access to all of the user's accounts). To this end, we use the fact that a
 signed Octokey authentication request is like a one-time password: it can be given to another device
 in order to authorize one-off access to one particular service.
@@ -103,29 +225,30 @@ The question is then how to get the signed authentication request onto the devic
 propose the following flow:
 
 \begin{enumerate}
-\item 
+\item Steps 1 to 4 are identical to the flow in section~\ref{sec:newdevice}, except that the user
+selects ``log in with your Octokey on another device'' instead of ``set up this device to use your
+existing Octokey''. The 2D barcode indicates that this is a signing request, not an enrollment
+request.
+\item The device requesting login requests a challenge $c$ from the service.
+\item Using the secure channel that has been set up between the devices, the device requesting login
+sends $c$ and the login URL $u$ to the device that scanned the barcode.
+\item The latter device prompts the user whether they want to allow the device whose barcode they
+just scanned to log in to their account at URL $u$. If yes, they choose the username $r$ to use
+(which may be autofilled from their database of services).
+\item If the user approves, the device goes through the usual mRSA signing flow to calculate a
+signature $s$, and sends the completed authentication request $(s, c, u, r, n, e)$ to the device
+requesting authentication, using the secure channel. That device sends the authentication request to
+the service to log in.
 \end{enumerate}
 
-In cases where an internet connection is not available on both devices, Bluetooth or NFC can be
-used.
+It is important that the user checks whether the authentication request is for the URL they were
+expecting, because a device could potentially request login for any service. As a usability
+improvement, user could be shown a screenshot of the website at the requested URL, not just the URL
+itself; this would make it visually obvious if the user's banking login is being requested when they
+thought they were logging into an online game. (As before, creating a phishing website with
+imitation design would not work --- in order to obtain a valid authentication request for the user's
+bank, they must supply the real bank's URL.)
 
-Browser and phone meet at rendezvous point (URL in QR code) / communicate over rendezvous channel
-
-We must assume that the contents of the barcode can be read by an attacker: it may be
-electromagnetically snooped~\cite{Kuhn05}, or an attacker may simply point a camera at the victim's
-screen. In order to establish a secure channel between the smartphone and the desktop browser, it is
-therefore not appropriate to embed a symmetric private key in the barcode.
-
-The browser has a separate keypair, with the private key identifying the browser itself (not the
-user). The QR code contains the URL of the rendezvous point, and the fingerprint of the browser's
-public key. When the rendezvous channel is established, the browser sends a message to the client
-signed with the browser's private key; and the client checks the signature, and checks that the
-fingerprint of the public key that made the signature matches the fingerprint in the QR code. Thus
-man-in-the-middling would require an attacker to actually modify the on-screen QR code, rather than
-just eavesdrop it. If the attacker has enough access to the device that they are able to manipulate
-what is displayed on the screen, then they can impersonate the user after logging in anyway (so all
-bets are off for that user account on that site). The user still needs to make sure that they are
-not being tricked into logging in to a different site from the one they thought they were logging in
-to; this can be done by displaying the URL of the login page on the mobile phone when the user is
-prompted to approve the authentication request. If the URL is not what the user was expecting, they
-must decline the authentication request.
+This process for delegated authentication is simple and fast, has fairly small risk of user error,
+and can be implemented with any smartphone. It is significantly more pleasant to use than a password
+manager, does not require typing anything, and is more secure.
