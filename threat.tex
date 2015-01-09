@@ -4,11 +4,11 @@ In this section, we discuss the assumptions we have made with regard to attacker
 some aspects which require careful implementation, and some areas where different concerns need to
 be traded off against each other.
 
-\subsection{Malware and untrusted software}
+\subsection{Malware and untrusted software}\label{sec:malware}
 
 Most authentication schemes in a consumer context are based on the principle that once a user has
 authenticated, they have unlimited access to their account: using different credentials for
-different actions is considered too inconvenient.\footnote{An exception are some online banking
+different user actions is considered too inconvenient.\footnote{An exception are some online banking
 websites, which require explicit authorization of each payment action, using a hardware token.}
 
 Consequently, once a user has authenticated with a service on a device, the software on that device
@@ -21,7 +21,7 @@ With Octokey, there is the additional risk of the device's private key (for inte
 communication) and mRSA key fragment being stolen. If the device has a built-in hardware security
 module, the actual keys are protected, but malware can nevertheless sign arbitrary authentication
 requests, because it is almost indistinguishable from legitimate user software. Thus, if malware is
-detected on a device, its keys must immediately be revoked.
+detected on a device, the user must immediately revoke that device using another enrolled device.
 
 In sandboxed environments (e.g. websites in web browsers, apps on some mobile OSes), mutually
 untrusting applications are somewhat protected from each other. In this case, there needs to be an
@@ -30,7 +30,7 @@ keys) and the websites and apps that require authentication. This mechanism must
 carefully, ensuring that a website or application can only obtain a signed authentication request
 for its own URL, and not some other one.
 
-\subsection{Physical device theft and loss}
+\subsection{Physical device theft and loss}\label{sec:theftloss}
 
 We assume that the private key material on a device is protected by a human-to-machine
 authentication step, e.g. encrypted with a password. This is not much use against malware, but it
@@ -48,45 +48,47 @@ the user has previously enrolled several devices).
 If an attacker steals two devices that are paired with each other, the risk of key theft is much
 greater, because the human-to-machine authentication is the only remaining protection: deleting key
 fragments from the remote store is not sufficient to prevent the attacker from recovering the key.
-This means there is a trade-off between security and reliability: pairing physical devices with each
-other provides redundancy in case the remote key fragment store is unavailable, but it increases the
-risk of the private key being stolen.
+The technique from section~\ref{sec:ratelimit} also no longer applies, because the encryption can be
+brute-forced offline. This means there is a trade-off between security and reliability: pairing
+physical devices with each other provides redundancy in case the remote key fragment store is
+unavailable, but it increases the risk of the private key being stolen.
 
 Another risk is that the user may lose access to their services: perhaps an attacker who gains
 control of a device uses it to revoke the user's legitimate devices (thus preventing the user from
 stopping the attacker); perhaps the user has only enrolled one or two physical devices, and they are
 stolen simultaneously; perhaps the user's house burns down and all of their devices are lost. To
-allow recovery from such situations, we recommend that users print off their private key and store
-it in a safe place.
+allow recovery from such situations, we recommend that users print off their private key on paper
+and store it in a safe place.
 
-\subsection{Key fragment store}
+An open question is whether the recovery key on paper should be the entire key, or a key fragment
+paired with the fragment store. The advantage of making it a fragment is that the user can revoke it
+in case the piece of paper is lost or stolen; the disadvantage is that an attacker who gains control
+of a device can also revoke it, and thus lock out the legitimate user. On balance, it is probably
+better to make it irrevocable (see also section~\ref{sec:rotation}).
 
-The key fragment store is likely to be an attack target. If it is compromised, all users need to
-re-pair with a new key fragment store (otherwise the ability to revoke keys is lost). For this
-reason, the protocol should allow forced re-pairing within a deadline.
+\subsection{Network attacks}\label{sec:netattack}
 
-Denial of service attacks on the key fragment store are also likely.
+A signed authentication request is tied to a particular server URL, so it cannot be reused with
+another service (assuming that services verify the URL in authentication requests correctly). This
+makes Octokey resilient to phishing attacks.
 
-Pair all physical devices with each other? Advantage: redundancy in case remote store has an outage.
-Disadvantage: if an attacker steals two paired devices (e.g. taking both your laptop and your
-smartphone in a robbery), mRSA revocation is not possible, so the human-to-machine authentication
-step is the only remaining protection of the private key.
+However, a signed authentication request is not tied to a particular client device, unless channel
+binding (section~\ref{sec:channelbinding}) is used. This means that if an attacker obtains a signed
+authentication request by eavesdropping, they can use it to authenticate as the user on that
+particular service.
 
-Does revocation still work if the user has only one device (besides the remote service)?
-Need to assume everyone has two physical devices?
+We rely on regular TLS to provide secrecy of the authentication request. The Octokey software
+should, if possible, prevent users from accidentally sending an authentication request over an
+unencrypted connection. Server certificate validation and HTTP Strict Transport Security (HSTS)
+should be used to avoid simple MITM attacks with invalid certificates. We expect that Certificate
+Transparency will help prevent more sophisticated MITM attacks with fraudulently issued
+certificates. If the client is a native app, the service's public key fingerprint should be embedded
+in the app and checked when connecting to the service (public key pinning).
 
-Does the remote key fragment store need to authenticate signing requests?
-
-The remote key fragment store sees plaintext URLs and challenges, so it could track a user's
-activity. Is this ok? Advantage: allows more granular limiting of abuse, e.g. rate limiting login
-attempts on one website without affecting other websites.
-
-The user should print off their entire private key, and store it in a safe place (e.g. bank vault).
-This gives them a recovery method in case all of their devices are simultaneously destroyed (house
-burns down).
-
-Question: how does Octokey know that a certain website URL is the same service as a certain iOS
-bundle ID, which is the same service as an Android app signed with a certain public key?
+For inter-device communication between enrolled Octokey devices, TLS with mutual authentication and
+public key pinning is used, which makes it resistant to MITM without requiring CA certificates. The
+public key fingerprints are distributed through a visual channel (using a 2D barcode), which is much
+harder to tamper with than a network connection (see also section~\ref{sec:barcode-intercept}).
 
 \subsection{2D barcode interception}\label{sec:barcode-intercept}
 
@@ -100,7 +102,7 @@ An attacker can thus connect to the URL in the barcode, and enroll the new devic
 account, instead of the user's own account as intended. With delegated login, the attacker can get
 the user to log in with the attacker's key rather than the user's own key. This does not compromise
 the user's key, but if the user logs in to the wrong account and doesn't realize it, they may
-inadvertently disclose sensitive information to the attacker.
+inadvertently disclose sensitive information to the attacker while using the account.
 
 It is not clear whether this would be a problem in practice. If it is, a mutual authentication step
 could be added to the flows for enrolling a new device and for delegated authentication (for
@@ -113,8 +115,8 @@ camera, so the additional verification step should probably be optional.
 When enrolling a new device or performing delegated authentication, we assume that an attacker
 cannot trick a user into scanning a different barcode from the one they intended --- i.e. we assume
 that the visual channel between the barcode-displaying and the barcode-scanning device provides
-integrity (but not confidentiality). If the attacker is able to manipulate what is displayed on
-screen, or somehow insert themselves into that channel, the user has bigger problems.
+integrity (but not confidentiality). We assume that malware (section~\ref{sec:malware}) would be the
+only way for an attacker to manipulate what is displayed on screen, or manipulate the camera signal.
 
 However, a real risk is that a malicious website or app displays a barcode that originates from an
 attacker-controlled device, and tricks the user into scanning that barcode and granting the attacker
@@ -127,8 +129,50 @@ requires user approval on a quorum (e.g. majority) of existing devices. This doe
 additional cryptographic algorithms, but can simply be implemented as a policy in the Octokey
 software.
 
-\subsection{Key rotation}
+\subsection{Online services}\label{sec:store-security}
+
+The remote key fragment store and the store-and-forward service are not strictly required from a
+cryptographic point of view, since the user could in principle use Octokey exclusively with physical
+devices and direct device-to-device communication. However, they are very useful for providing a
+good user experience, allowing a user to authenticate using only one physical device, and making
+inter-device communication work ``out of the box''.
+
+From a service owner's point of view, the key fragment store does not need to be trusted (unlike an
+OpenID identity provider, for example), because a signed authentication request is simply an RSA
+signature in any case. Thus, the choice of key fragment store and store-and-forward services is
+entirely up to the user. We propose that a public service should be provided for free, operated by a
+nonprofit foundation. However, technically sophisticated users or organizations may choose to
+operate their own fragment stores, if they wish.
+
+Operating a fragment store is not an easy task, since it is likely to become a popular attack
+target: some attackers may want to steal the key fragments and other user data, whereas others may
+try to disrupt the availability of the service by flooding it with traffic. The operators of the
+fragment store will need expertise in dealing with such adversaries.
+
+In the worst case, if attackers succeed in obtaining a copy of all the key fragments in the remote
+store, the operators of the store will have to inform all users, and the users will have to re-pair
+all of their devices with a new fragment store. The inter-device communication protocol should have
+a mechanism by which a store operator can force all users to re-pair. Such a break-in would not
+\emph{per se} expose private keys, but any stolen devices that are not re-paired with a new store
+are much more likely to result in key theft.
+
+The store-and-forward service is less critical for security, since it cannot read the contents of
+messages it delivers, and it cannot tamper with them. It can only drop messages instead of
+forwarding them, and thus interrupt the inter-device communication. To guard against this
+possibility, physical devices should also try to connect through local communication channels when
+possible, and thus exchange any messages that may have been lost.
+
+\subsection{Key rotation}\label{sec:rotation}
+
+Requires printing off a new recovery key every month?
+
 \subsection{Multiple keypairs per user}
+
+% How does Octokey know that a certain website URL is the same service as a certain iOS
+% bundle ID, which is the same service as an Android app signed with a certain public key?
+% If each URL/bundle ID/app ID has a separate keypair, there needs to be some way of tying them
+% together.
+
 \subsection{Multi-way key splitting}
 \subsection{Security levels}
 
@@ -136,7 +180,7 @@ software.
 % use of a stolen key
 
 
-\subsection{Denial of service}
+\subsection{Recovering from key theft}
 
 Prevent denial of service due to rate limiting or due to an attacker revoking a user's active
 devices.

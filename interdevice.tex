@@ -62,33 +62,34 @@ point of failure. The same TLS record protocol can be used over those transport 
 
 These point-to-point channels are used for exchanging mRSA signing requests and responses between
 devices. Moreover, we can use them for replicating information that we want stored on all devices:
-each of the user's physical devices maintains a local database containing public key fingerprints of
-all of the user's other devices (for mutual authentication of channels), configuration (e.g. URL of
-the key fragment server), information on which devices are paired (for key revocation purposes), a
-list of all the services they have logged in to (for username autofill), and so on.
+each of the user's devices maintains a local database containing public key fingerprints of all of
+the user's other devices (for mutual authentication of channels), configuration (e.g. URL of the key
+fragment server), information on which devices are paired (for key revocation purposes), a list of
+all the services they have logged in to (for username autofill), and so on.
 
-Each of the user's physical devices should be able to read and modify this database, and any changes
-should be asynchronously propagated to the other devices. To this end, we can use the point-to-point
+Each of the user's devices needs to be able to read and modify this database, and any changes should
+be asynchronously propagated to the other devices. To this end, we can use the point-to-point
 channels of section~\ref{sec:channels} to create a mesh of connections among the user's devices
 (even between those which are not paired). It is not necessary to have a communication channel
-between every pair of devices, but a fairly densely connected graph of channels is desirable, so
-that any message from one device reaches the other devices fairly quickly, and so that the
-communication is resilient to device and channel failures.
+between every pair of devices, because devices can forward incoming database changes to others.
+However, a fairly densely connected graph of channels is desirable, so that any message from one
+device reaches the other devices fairly quickly, and so that the communication is resilient to
+device and channel failures.
 
 Within this mesh network, we can use a \emph{gossip protocol} (also known as \emph{epidemic
 protocol}) \cite{Demers89} for disseminating database changes. \emph{Version vectors}
 \cite{ParkerJr83} can be used to efficiently detect data differences that need to be synchronized,
 and \emph{CRDTs}~\cite{Shapiro11} can automatically resolve any conflicts between concurrent
 database updates, without requiring user interaction. Every database change must be signed with the
-device key of the device on which it originated, so that any changes made on a stolen device can be
-rejected.
+device key of the device on which it originated, so that any changes made on a revoked device can be
+rejected, and so that one device can't make changes on another device's behalf.
 
-Although the key fragment store is one of the user's `devices', it does not need a copy of this
-database, and it must not be allowed to make database updates. Only physical devices may
-authenticate with services on the user's behalf, and only physical devices may enroll additional
-trusted devices. This makes it safe for the key fragment store to be operated by a third party. To
-protect the user's privacy, if a copy of the database is stored on the key fragment store for backup
-purposes, it must be encrypted such that only the user's physical devices can restore it.
+The key fragment store also needs access to this database in order to correctly authenticate clients
+and process revocation requests. Although the key fragment store cannot authenticate with services
+on behalf of the user, it can track the user's login activity, which may be a privacy concern if the
+key fragment store is hosted by a third party. Thus, users may choose to operate their own key
+fragment store if they wish, although doing so will require technical expertise (see also
+section~\ref{sec:store-security}).
 
 \subsection{Bootstrapping}\label{sec:bootstrap}
 
@@ -107,7 +108,7 @@ application).
 distributed random integer with $0 < d_1 < d$. The device stores $d_1$ locally, sends $d_2$ to the
 key fragment store.
 \item The user has the option of printing off the private key, as a last-resort backup in case all
-of their devices are lost (see section~\ref{sec:threat}). Then the application deletes $d$.
+of their devices are lost (see section~\ref{sec:theftloss}). Then the application deletes $d$.
 \end{enumerate}
 
 \subsection{Enrolling a new device}\label{sec:newdevice}
