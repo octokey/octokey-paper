@@ -20,8 +20,10 @@ that device can be compromised.
 With Octokey, there is the additional risk of the device's private key (for inter-device
 communication) and mRSA key fragment being stolen. If the device has a built-in hardware security
 module, the actual keys are protected, but malware can nevertheless sign arbitrary mandates, because
-it is almost indistinguishable from legitimate user software. Thus, if malware is detected on a
-device, the user must immediately revoke that device using another enrolled device.
+it is almost indistinguishable from legitimate user software. Moreover, a hardware security module
+may not support the operations required by the pairing algorithm (section~\ref{sec:pairing}). Thus,
+we assume that Octokey is normally implemented in software. If malware is detected on a device, the
+user must immediately revoke that device using another enrolled device.
 
 In sandboxed environments (e.g. websites in web browsers, apps on some mobile OSes), mutually
 untrusting applications are somewhat protected from each other. In this case, there needs to be an
@@ -89,7 +91,7 @@ public key pinning is used, which makes it resistant to MITM without requiring C
 public key fingerprints are distributed through a visual channel (using a 2D barcode), which is much
 harder to tamper with than a network connection (see also section~\ref{sec:barcode-intercept}).
 
-\subsection{2D barcode interception}\label{sec:barcode-intercept}
+\subsection{2D barcode eavesdropping}\label{sec:barcode-intercept}
 
 In the flow for enrolling a new device (section~\ref{sec:newdevice}), and with delegated login
 (section~\ref{sec:delegation}), we proposed displaying a 2D barcode on the screen of one device, and
@@ -120,7 +122,7 @@ only way for an attacker to manipulate what is displayed on screen, or manipulat
 However, a real risk is that a malicious website or app displays a barcode that originates from an
 attacker-controlled device, and tricks the user into scanning that barcode and granting the attacker
 unwanted access. In this scenario we must rely on well-written warning messages and user education
-to ensure the user really understands what they are doing.
+to ensure the user really understands what they are doing when they scan a barcode.
 
 For users who have already set up multiple physical devices, as an additional safeguard against
 accidentally pairing with an attacker-controlled device, we can require that enrolling a new device
@@ -131,7 +133,7 @@ software.
 \subsection{Online services}\label{sec:mediator-sec}
 
 The mediator and the store-and-forward service are not strictly required from a cryptographic point
-of view, since the user could in principle use Octokey exclusively with physical devices and direct
+of view: in principle, the user could use Octokey exclusively with physical devices and direct
 device-to-device communication. However, they are very useful for providing a good user experience,
 allowing a user to authenticate using only one physical device, and making inter-device
 communication work ``out of the box''.
@@ -139,9 +141,9 @@ communication work ``out of the box''.
 From a service owner's point of view, the mediator does not need to be trusted (unlike an OpenID
 identity provider, for example), because a mandate is simply an RSA signature in any case. Thus, the
 choice of mediator and store-and-forward services is entirely up to the user. We propose that a
-public service should be provided for free, operated by a nonprofit foundation. However, technically
-sophisticated users or organizations may choose to operate their own mediators and store-and-forward
-services, if they wish.
+public mediator and store-and-forward service should be provided for free, operated by a nonprofit
+foundation. However, technically sophisticated users or organizations may choose to operate their
+own mediators and store-and-forward services, if they wish.
 
 Operating a mediator is not an easy task, since it is likely to become a popular attack target: some
 attackers may want to steal the key fragments and other user data, whereas others may try to disrupt
@@ -161,19 +163,52 @@ forwarding them, and thus interrupt the inter-device communication. To guard aga
 possibility, physical devices should also try to connect through local communication channels when
 possible, and thus exchange any messages that may have been lost.
 
-\subsection{Key rotation}\label{sec:rotation}
+\subsection{Multiple keypairs per user}\label{sec:identities}
 
-Requires printing off a new recovery key every month?
+In the discussion above we have assumed that each user has only one keypair, i.e. that the same
+public key is sent to every service where the user wants to authenticate. However, this raises a
+privacy problem: services can easily detect whether two different accounts are owned by the same
+person.
 
-\subsection{Multiple keypairs per user}
+We believe that pseudonymous usage of services should be possible, since it is beneficial for free
+speech, separation of work and personal life, avoiding harrassment, etc. One approach would be for
+Octokey to generate a separate key for every distinct login URL (or at least every domain name).
+However, there are several reasons why this is not an ideal solution:
+\begin{itemize}
+\item Every new key must go through the re-pairing process (section~\ref{sec:pairing}), which
+requires a large number of messages to be sent between devices. There would also be a delay between
+signing up to a service on one device and being able to use it on another device.
+\item If keys are printed on paper as a last-resort backup (section~\ref{sec:theftloss}), the user
+would have to print off a key for every service they use. As users may have accounts with hundreds
+of services, this would be impractical. Restoring access after key loss would require individually
+scanning or re-entering each service's key, which is also impractical.
+\item The same service may use several different URLs: for example, one for the desktop website,
+another for the mobile site, and perhaps custom URI schemes for invoking native apps. Octokey
+wouldn't know which URLs/URIs belong to the same service, so it would generate a key for each, and
+cross-app login would not work as expected.
+\item In some cases, users may want to prove that several accounts are in fact owned by the same
+person --- for example, Keybase\footnote{\url{https://keybase.io/}} exists for this purpose. In this
+situation, it would be natural for services to publish the public key fingerprint of a user, and for
+the user to use the same key to log into all the services they wish to associate.
+\end{itemize}
 
-% How does Octokey know that a certain website URL is the same service as a certain iOS
-% bundle ID, which is the same service as an Android app signed with a certain public key?
-% If each URL/bundle ID/app ID has a separate keypair, there needs to be some way of tying them
-% together.
+Rather than generating a different key for every service, we propose letting the user explicitly
+create multiple \emph{identities}. Each identity's key can be printed off when it is first created,
+before the key is split into fragments. Each identity may include some metadata (e.g. the user's
+name or pseudonym) to identify it. When a user signs up to a service, they choose the identity to
+use, and thereafter the username and the identity are associated in the user's database of accounts.
+
+Identities also allow different device pairing arrangements for different keys. For example, an
+organization's social media accounts may use a key which is shared between all the employees who
+have permission to administer the accounts.
 
 \subsection{Multi-way key splitting}
 \subsection{Security levels}
+
+% Key escrow service rather than printing stuff off? e.g. define a standard API which your bank can
+% implement; through that API Octokey can automatically submit private keys to the bank when the
+% keys are rotated; to get them out again, you have to show up in person at the bank and show them
+% your passport.
 
 % Sync login history across devices, and compare to login history reported by server, to detect
 % use of a stolen key
