@@ -98,7 +98,10 @@ When someone first starts using Octokey, they go through the following steps:
 \item The user installs the Octokey application on a physical device, and selects ``create new
 Octokey''.
 \item The application generates the user's RSA keypair $(n, d, e)$, as well as the keypair and
-self-signed certificate for that device.
+self-signed certificate for that device.\footnote{It is possible, albeit rather slower, to perform
+the key generation distributed across multiple devices, so that no device ever has the entire $d$.
+\cite{Boneh01b} However, if we want to allow the user to print off the entire key as a backup, we
+need to have the entire key in one place anyway. See section~\ref{sec:theftloss} for a discussion.}
 \item The application contacts a mediator of the user's choice (a default may be provided) over TLS,
 using its device certificate for client authentication, and verifying the server using well-known
 certificate authorities (or a pinned public key fingerprint embedded in the application).

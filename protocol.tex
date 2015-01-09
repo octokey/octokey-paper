@@ -67,7 +67,7 @@ weak password on the private key), the attacker could gain access to all of a us
 
 To mitigate this risk, we ensure that the private exponent $d$ is never stored on any one device.
 Instead, we split it into key fragments that are distributed among the user's devices. We use the
-\emph{mediated RSA} (mRSA) scheme~\cite{Boneh01} which is based on the fact that
+\emph{mediated RSA} (mRSA) scheme~\cite{Boneh01, Kutyiowski12} which is based on the fact that
 $$s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n$$ provided that $d = d_a + d_b \mod \phi(n)$.
 
 If two devices $a$ and $b$ each have a key fragment $d_a$ and $d_b$ respectively, and those
