@@ -28,7 +28,7 @@ If a password is used to decrypt the user's private key, they need only remember
 per device (or perhaps per keypair), but not a separate password for every service where they have
 an account. We believe that a single password is an acceptable user experience.
 
-\subsection{Authentication requests}
+\subsection{Authentication mandates}
 
 Each user has a RSA keypair $(n, d, e)$ where $n$ is the modulus, $d$ is the private exponent and
 $e$ is the public exponent. When signing up to a service, the user submits their public key
@@ -40,10 +40,10 @@ registered username. $H$ encodes its arguments as a binary string and then appli
 \textsc{EMSA-PSS-Encode} operation (hashing and padding) as defined in PKCS\#1.~\cite{PKCS1} From
 that, the RSA signature can be calculated as $s = m^d \mod n$.
 
-The client then constructs the authentication request, which is an encoding of the tuple
-$(s, c, u, r, n, e)$. The authentication request is sent to the server as part of a HTTP request
-over TLS, and is handled at the application layer. The server can verify the authentication request
-by checking that all of the following are true:
+The client then constructs the \emph{mandate}, which is an encoding of the tuple
+$(s, c, u, r, n, e)$. The mandate is sent to the server as part of a HTTP request over TLS, and is
+handled at the application layer. The server can verify the mandate by checking that all of the
+following are true:
 \begin{itemize}
 \item $s$ is a valid PKCS\#1 signature of the values $(c, u, r)$, checked against the public key
 $(n, e)$.
@@ -54,8 +54,8 @@ This prevents phishing-like attacks, whereby an attacker creates an imitation we
 similar-looking URL and tricks the user into logging in.
 \item $r$ is a registered username for this service, and $(n, e)$ is a public key for that user.
 \end{itemize}
-If the authentication request is successfully verified, the user is logged in by the server in the
-usual manner, for example by setting an appropriate session cookie.
+If the mandate is successfully verified, the user is logged in by the server in the usual manner,
+for example by setting an appropriate session cookie.
 
 \subsection{Protection against key theft}\label{sec:revocation}
 
@@ -73,8 +73,8 @@ $$s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n$$ provided that $d = d_a + d_
 If two devices $a$ and $b$ each have a key fragment $d_a$ and $d_b$ respectively, and those
 fragments sum to the private exponent $d$, then we call those devices \emph{paired}. In order to
 generate a valid signature, any two paired devices need to collaborate. If device $a$ wants to
-generate an authentication request, it can send $(c, u, r)$ to device $b$, which may first ask the
-user to confirm whether they wish to log in to URL $u$ using username $r$. If yes, $b$ calculates
+generate a mandate, it can send $(c, u, r)$ to device $b$, which may first ask the user to confirm
+whether they wish to log in to URL $u$ using username $r$. If yes, $b$ calculates
 $H(c, u, r)^{d_b} = m^{d_b}$ and returns that value to $a$. Then $a$ can calculate
 $s = m^{d_a} m^{d_b}$ by using its own key fragment $d_a$ and the value returned by $b$, and thus
 log in.
@@ -90,7 +90,7 @@ A key could also be split into more than two fragments, which would protect agai
 an attacker manages to steal two or more devices. However, this comes at the cost of a more
 cumbersome user experience, so we concentrate on the two-fragment case for now.
 
-\subsection{Remote key fragment store}\label{sec:fragmentstore}
+\subsection{The mediator service}\label{sec:mediator}
 
 Authenticating by using paired physical devices (e.g.\ a laptop and a smartphone) yields a similar
 user experience to current 2-factor authentication solutions, whereby the user must fetch the phone
@@ -99,21 +99,21 @@ possible, but distinctly less convenient for users than typing a password, so it
 user experience we are looking for.
 
 However, there is a simple solution within the mRSA framework: one of the user's `devices' may be a
-remote service on the internet. This service stores key fragments that are paired with each of the
-user's physical devices, and responds to signing requests by performing the modular exponentiation
-using its key fragments. This allows a user to authenticate with services using only one physical
-device -- the coordination with the remote key fragment store happens automatically behind the
-scenes.
+remote service on the internet, which we call the \emph{mediator}. This service stores key fragments
+that are paired with each of the user's physical devices, and responds to signing requests by
+performing the modular exponentiation using its key fragments. This allows a user to authenticate
+with services using only one physical device -- the coordination with the mediator happens
+automatically behind the scenes.
 
-The key fragment store need only be partially trusted. It cannot authenticate as the user without
-the cooperation of one of the user's physical devices. The user only needs to trust the key fragment
-store to not collude with attackers who steal devices, and to delete key fragments when the user
-requires key revocation.
+The mediator need only be partially trusted. It cannot authenticate as the user without the
+cooperation of one of the user's physical devices. The user only needs to trust the mediator to not
+collude with attackers who steal devices, and to delete key fragments when the user requires key
+revocation.
 
-From the point of view of an online service, the key fragment store does not even exist: a service
-simply verifies the RSA signature on an authentication request, and does not care how that signature
-was constructed. This is in contrast to federated login systems, where the relying party must trust
-the identity provider.
+From the point of view of a service that accepts Octokey login, the mediator does not even exist: a
+service simply verifies the RSA signature on a mandate, and does not care how that signature was
+constructed. This is in contrast to federated login systems, where the relying party must trust the
+identity provider.
 
 \subsection{Rate limiting password guesses}\label{sec:ratelimit}
 
@@ -131,49 +131,48 @@ uses a block cipher, the key fragment must be padded with random bits up to the 
 with zeros would leak information on whether a password guess was correct.}
 
 Assuming the attacker has no other key fragments, they can only determine whether the password guess
-was correct by communicating with the remote key fragment store and testing whether they are able to
-construct a valid PKCS\#1 signature. This gives us an opportunity to rate-limit password guessing
-attempts: if the remote store receives too many requests based on an incorrect password, it can
-block further attempts and advise the user to revoke the device pairing.
+was correct by communicating with the mediator and testing whether they are able to construct a
+valid PKCS\#1 signature. This gives us an opportunity to rate-limit password guessing attempts: if
+the mediator receives too many requests based on an incorrect password, it can block further
+attempts and advise the user to revoke the device pairing.
 
 In order to achieve this, we must design the protocol such that an attacker must communicate with
-the remote store for every password attempt, but without revealing the password or the decrypted key
-fragment to the remote store. We can do this as follows:
+the mediator for every password attempt, but without revealing the password or the decrypted key
+fragment to the mediator. We can do this as follows:
 
 Say the key fragment $d_a$ has been encrypted with password $\mathit{pass}$, and the attacker has
 stolen the encrypted fragment
 $$\mathit{efrag} = \mathrm{encrypt}(\mathrm{PBKDF2}(\mathit{pass}), d_a).$$
 The attacker now guesses $\mathit{pass}^\prime$ and computes a guess $d_a^\prime$ of the plaintext:
 $$d_a^\prime = \mathrm{decrypt}(\mathrm{PBKDF2}(\mathit{pass}^\prime), \mathit{efrag})$$
-To check whether $d_a^\prime = d_a$ the attacker needs to contact the remote store where $d_b$ is
-held. We previously said that a signing request to the store consists of $(c, u, r)$. We now extend
+To check whether $d_a^\prime = d_a$ the attacker needs to contact the mediator where $d_b$ is held.
+We previously said that a signing request to the mediator consists of $(c, u, r)$. We now extend
 this to require an additional parameter:
 $$\left(c, u, r, H(H(c, u, r))^{d_a^\prime}\right)$$
-The additional parameter allows the store to verify whether the client's $d_a^\prime$ is correctly
-decrypted, without revealing $d_a^\prime$ or the password. The store simply uses its own $d_b$ to
-compute $$H(H(c, u, r))^{d_a^\prime}H(H(c, u, r))^{d_b}$$ and checks whether the result is a valid
-PKCS\#1 signature for the user's public key $(n, e)$.
+The additional parameter allows the mediator to verify whether the client's $d_a^\prime$ is
+correctly decrypted, without revealing $d_a^\prime$ or the password. The mediator simply uses its
+own $d_b$ to compute $$H(H(c, u, r))^{d_a^\prime}H(H(c, u, r))^{d_b}$$ and checks whether the result
+is a valid PKCS\#1 signature for the user's public key $(n, e)$.
 
-If the signature is valid, the store computes $H(c, u, r)^{d_b}$ as before, and returns it to the
-client. If the signature is not valid, the store returns ``bad signature''. The attacker learns that
-the password guess $\mathit{pass}^\prime$ was incorrect, but otherwise nothing is revealed that
+If the signature is valid, the mediator computes $H(c, u, r)^{d_b}$ as before, and returns it to the
+client. If the signature is not valid, the mediator returns ``bad signature''. The attacker learns
+that the password guess $\mathit{pass}^\prime$ was incorrect, but otherwise nothing is revealed that
 would help them guess the password.
 
-The values $(c, u, r)$ are hashed twice so that the store cannot use the signature to make any
-authentication requests on behalf of the user.
+The values $(c, u, r)$ are hashed twice so that the mediator cannot use the signature to generate
+any mandates on behalf of the user.
 
 This protection only works if the attacker does not have any knowledge of previous requests to the
-store. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a response) for any $x$, they can
-brute-force the password without contacting the remote store, and thus circumvent the rate-limiting.
-It is therefore important that communication with the remote store is protected from eavesdropping
+mediator. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a response) for any $x$, they
+can brute-force the password without contacting the mediator, and thus circumvent the rate-limiting.
+It is therefore important that communication with the mediator is protected from eavesdropping
 (using TLS) and is not logged on the device.
 
 \subsection{Channel binding and preventing MITM}\label{sec:channelbinding}
 
-Once a device has assembled a signature for an authentication request, that signature has the
-function of a one-time password: if an attacker can intercept it before it reaches the intended
-service, the attacker can use it to impersonate the user. It is therefore essential that the
-authentication request is sent over TLS.
+Once a device has assembled a signature for a mandate, it has the function of a one-time password:
+if an attacker can intercept the mandate before it reaches the intended service, the attacker can
+use it to impersonate the user. It is therefore essential that the mandate is sent over TLS.
 
 However, TLS connections are susceptible to man-in-the-middle attacks using forged TLS certificates,
 due to users ignoring warnings about invalid certificates, or due to malware. Such incidents have
@@ -183,17 +182,16 @@ Some authentication methods such as SCRAM-SHA-1-PLUS~\cite{SCRAM} use \emph{chan
 prevent MITM attacks. For example, the \texttt{tls-unique} channel binding type works by hashing the
 handshake messages that established the TLS connection: in a direct connection, server and client
 obtain the same hash value, but if the connection was terminated and restarted by a MITM, the server
-and client's values differ. If the client incorporates this hash value into the authentication
-request (such that it cannot be changed by the MITM), and the server checks that it equals the
-server-side view of the connection, then an authentication request is rendered invalid by the
-presence of a MITM.
+and client's values differ. If the client incorporates this hash value into the mandate (such that
+it cannot be changed by the MITM), and the server checks that it equals the server-side view of the
+connection, then a mandate is rendered invalid by the presence of a MITM.
 
 Origin-Bound Certificates~\cite{Dietz12} generalize this idea to the web, creating a channel
 binding that is not tied to a particular TCP connection. When a client first connects to a
 particular domain name, it automatically creates a TLS client certificate (without any user
 interaction) and presents it to the server. This certificate does not have any authentication
-purpose, but the fingerprint of the certificate can be incorporated as channel identifier into an
-authentication request.
+purpose, but the fingerprint of the certificate can be incorporated as channel identifier into a
+mandate.
 
 While channel binding would yield a significant improvement in security, it would also make the
 protocol much harder to deploy, both on the client and on the server side. It would therefore likely

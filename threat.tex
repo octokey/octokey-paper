@@ -19,16 +19,16 @@ that device can be compromised.
 
 With Octokey, there is the additional risk of the device's private key (for inter-device
 communication) and mRSA key fragment being stolen. If the device has a built-in hardware security
-module, the actual keys are protected, but malware can nevertheless sign arbitrary authentication
-requests, because it is almost indistinguishable from legitimate user software. Thus, if malware is
-detected on a device, the user must immediately revoke that device using another enrolled device.
+module, the actual keys are protected, but malware can nevertheless sign arbitrary mandates, because
+it is almost indistinguishable from legitimate user software. Thus, if malware is detected on a
+device, the user must immediately revoke that device using another enrolled device.
 
 In sandboxed environments (e.g. websites in web browsers, apps on some mobile OSes), mutually
 untrusting applications are somewhat protected from each other. In this case, there needs to be an
-explicit way of passing authentication requests between the Octokey application (which manages the
-keys) and the websites and apps that require authentication. This mechanism must be implemented
-carefully, ensuring that a website or application can only obtain a signed authentication request
-for its own URL, and not some other one.
+explicit way of passing mandates between the Octokey application (which manages the keys) and the
+websites and apps that require authentication. This mechanism must be implemented carefully,
+ensuring that a website or application can only obtain a mandate for its own URL, and not some other
+one.
 
 \subsection{Physical device theft and loss}\label{sec:theftloss}
 
@@ -40,18 +40,18 @@ force and dictionary attacks.
 
 If the user has enrolled another device, they can use that device to revoke the stolen device. If
 the revocation happens before the human-to-machine authentication is broken, no harm is done. If the
-device is not revoked in time, the attacker can sign arbitrary authentication requests, and steal
-the key by enrolling another device and pairing it with the stolen device. The risk of key theft can
-be mitigated by prompting the user on several devices before enrolling another device (provided that
+device is not revoked in time, the attacker can sign arbitrary mandates, and steal the key by
+enrolling another device and pairing it with the stolen device. The risk of key theft can be
+mitigated by prompting the user on several devices before enrolling another device (provided that
 the user has previously enrolled several devices).
 
 If an attacker steals two devices that are paired with each other, the risk of key theft is much
 greater, because the human-to-machine authentication is the only remaining protection: deleting key
-fragments from the remote store is not sufficient to prevent the attacker from recovering the key.
-The technique from section~\ref{sec:ratelimit} also no longer applies, because the encryption can be
+fragments from the mediator is not sufficient to prevent the attacker from recovering the key.  The
+technique from section~\ref{sec:ratelimit} also no longer applies, because the encryption can be
 brute-forced offline. This means there is a trade-off between security and reliability: pairing
-physical devices with each other provides redundancy in case the remote key fragment store is
-unavailable, but it increases the risk of the private key being stolen.
+physical devices with each other provides redundancy in case the mediator is unavailable, but it
+increases the risk of the private key being stolen.
 
 Another risk is that the user may lose access to their services: perhaps an attacker who gains
 control of a device uses it to revoke the user's legitimate devices (thus preventing the user from
@@ -61,29 +61,28 @@ allow recovery from such situations, we recommend that users print off their pri
 and store it in a safe place.
 
 An open question is whether the recovery key on paper should be the entire key, or a key fragment
-paired with the fragment store. The advantage of making it a fragment is that the user can revoke it
-in case the piece of paper is lost or stolen; the disadvantage is that an attacker who gains control
-of a device can also revoke it, and thus lock out the legitimate user. On balance, it is probably
+paired with the mediator. The advantage of making it a fragment is that the user can revoke it in
+case the piece of paper is lost or stolen; the disadvantage is that an attacker who gains control of
+a device can also revoke it, and thus lock out the legitimate user. On balance, it is probably
 better to make it irrevocable (see also section~\ref{sec:rotation}).
 
 \subsection{Network attacks}\label{sec:netattack}
 
-A signed authentication request is tied to a particular server URL, so it cannot be reused with
-another service (assuming that services verify the URL in authentication requests correctly). This
-makes Octokey resilient to phishing attacks.
+A mandate is tied to a particular server URL, so it cannot be reused with another service (assuming
+that services verify the URL in mandates correctly). This makes Octokey resilient to phishing
+attacks.
 
-However, a signed authentication request is not tied to a particular client device, unless channel
-binding (section~\ref{sec:channelbinding}) is used. This means that if an attacker obtains a signed
-authentication request by eavesdropping, they can use it to authenticate as the user on that
-particular service.
+However, a mandate is not tied to a particular client device, unless channel binding
+(section~\ref{sec:channelbinding}) is used. This means that if an attacker obtains a mandate by
+eavesdropping, they can use it to authenticate as the user on that particular service.
 
-We rely on regular TLS to provide secrecy of the authentication request. The Octokey software
-should, if possible, prevent users from accidentally sending an authentication request over an
-unencrypted connection. Server certificate validation and HTTP Strict Transport Security (HSTS)
-should be used to avoid simple MITM attacks with invalid certificates. We expect that Certificate
-Transparency will help prevent more sophisticated MITM attacks with fraudulently issued
-certificates. If the client is a native app, the service's public key fingerprint should be embedded
-in the app and checked when connecting to the service (public key pinning).
+We rely on regular TLS to provide secrecy of the mandate. The Octokey software should, if possible,
+prevent users from accidentally sending a mandate over an unencrypted connection. Server certificate
+validation and HTTP Strict Transport Security (HSTS) should be used to avoid simple MITM attacks
+with invalid certificates. We expect that Certificate Transparency will help prevent more
+sophisticated MITM attacks with fraudulently issued certificates. If the client is a native app, the
+service's public key fingerprint should be embedded in the app and checked when connecting to the
+service (public key pinning).
 
 For inter-device communication between enrolled Octokey devices, TLS with mutual authentication and
 public key pinning is used, which makes it resistant to MITM without requiring CA certificates. The
@@ -129,32 +128,32 @@ requires user approval on a quorum (e.g. majority) of existing devices. This doe
 additional cryptographic algorithms, but can simply be implemented as a policy in the Octokey
 software.
 
-\subsection{Online services}\label{sec:store-security}
+\subsection{Online services}\label{sec:mediator-sec}
 
-The remote key fragment store and the store-and-forward service are not strictly required from a
-cryptographic point of view, since the user could in principle use Octokey exclusively with physical
-devices and direct device-to-device communication. However, they are very useful for providing a
-good user experience, allowing a user to authenticate using only one physical device, and making
-inter-device communication work ``out of the box''.
+The mediator and the store-and-forward service are not strictly required from a cryptographic point
+of view, since the user could in principle use Octokey exclusively with physical devices and direct
+device-to-device communication. However, they are very useful for providing a good user experience,
+allowing a user to authenticate using only one physical device, and making inter-device
+communication work ``out of the box''.
 
-From a service owner's point of view, the key fragment store does not need to be trusted (unlike an
-OpenID identity provider, for example), because a signed authentication request is simply an RSA
-signature in any case. Thus, the choice of key fragment store and store-and-forward services is
-entirely up to the user. We propose that a public service should be provided for free, operated by a
-nonprofit foundation. However, technically sophisticated users or organizations may choose to
-operate their own fragment stores, if they wish.
+From a service owner's point of view, the mediator does not need to be trusted (unlike an OpenID
+identity provider, for example), because a mandate is simply an RSA signature in any case. Thus, the
+choice of mediator and store-and-forward services is entirely up to the user. We propose that a
+public service should be provided for free, operated by a nonprofit foundation. However, technically
+sophisticated users or organizations may choose to operate their own mediators and store-and-forward
+services, if they wish.
 
-Operating a fragment store is not an easy task, since it is likely to become a popular attack
-target: some attackers may want to steal the key fragments and other user data, whereas others may
-try to disrupt the availability of the service by flooding it with traffic. The operators of the
-fragment store will need expertise in dealing with such adversaries.
+Operating a mediator is not an easy task, since it is likely to become a popular attack target: some
+attackers may want to steal the key fragments and other user data, whereas others may try to disrupt
+the availability of the service by flooding it with traffic. The operators of the mediator will need
+expertise in dealing with such adversaries.
 
-In the worst case, if attackers succeed in obtaining a copy of all the key fragments in the remote
-store, the operators of the store will have to inform all users, and the users will have to re-pair
-all of their devices with a new fragment store. The inter-device communication protocol should have
-a mechanism by which a store operator can force all users to re-pair. Such a break-in would not
-\emph{per se} expose private keys, but any stolen devices that are not re-paired with a new store
-are much more likely to result in key theft.
+In the worst case, if attackers succeed in obtaining a copy of all the key fragments in the
+mediator, the operators of the mediator will have to inform all users, and the users will have to
+re-pair all of their devices with a new mediator. The inter-device communication protocol should
+have a mechanism by which a mediator operator can force all users to re-pair. Such a break-in would
+not \emph{per se} expose private keys, but any stolen devices that are not re-paired with a new
+mediator are much more likely to result in key theft.
 
 The store-and-forward service is less critical for security, since it cannot read the contents of
 messages it delivers, and it cannot tamper with them. It can only drop messages instead of

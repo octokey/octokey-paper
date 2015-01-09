@@ -1,14 +1,14 @@
 \section{Inter-device communication}\label{sec:interdevice}
 
 Octokey assumes that the user has multiple internet-connected devices: two at minimum (one physical
-device and one remote key fragment store), but likely several more (desktop computer, laptop,
-smartphone, tablet, game console, television, automobile, etc).
+device and one mediator), but likely several more (desktop computer, laptop, smartphone, tablet,
+game console, television, automobile, etc).
 
 We assume that users want to be able to access all of their services on any one of their physical
 devices (devices with partial access to the user's services are discussed in
 section~\ref{sec:delegation}). Thus, each physical device should be paired at minimum with the
-remote key fragment store. Some physical devices may also be paired with each other, to provide
-redundancy in case of a failure of the remote store (discussed in section~\ref{sec:threat}).
+mediator. Some physical devices may also be paired with each other, to provide redundancy in case of
+a failure of the mediator (discussed in section~\ref{sec:theftloss}).
 
 The system should make it easy to enroll new devices to the user's set of trusted devices, and to
 revoke any devices which are lost or no longer in use. It may also provide convenience features,
@@ -19,7 +19,7 @@ synchronize with each other.
 \subsection{Communication protocol}\label{sec:channels}
 
 First, we need to be able to establish a secure point-to-point communication channel between any two
-of the user's devices (treating the remote store as one of the devices). The channel must provide
+of the user's devices (treating the mediator as one of the devices). The channel must provide
 secrecy and integrity, so that an attacker cannot eavesdrop or modify communcation between devices.
 It must also prevent spoofing, so that an attacker cannot impersonate a device or MITM a channel.
 
@@ -41,9 +41,9 @@ TLS over TCP, we propose using an alternative transport layer in the form of a s
 service.
 
 The store-and-forward service is a web service that can be reached from all devices (it may be
-co-located with the remote key fragment store). It accepts messages from one device and relays them
-to another device: if the recipient is online, the messages are forwarded immediately, otherwise
-they are stored until the recipient is next online. The messages are records of the TLS Record
+co-located with the mediator). It accepts messages from one device and relays them to another
+device: if the recipient is online, the messages are forwarded immediately, otherwise they are
+stored until the recipient is next online. The messages are records of the TLS Record
 Protocol~\cite{TLS}, so two devices can perform a TLS handshake and establish a secure channel by
 sending each other messages via the store-and-forward service. The service needs to be highly
 available, but it does not need to be trusted for security purposes.
@@ -63,9 +63,9 @@ point of failure. The same TLS record protocol can be used over those transport 
 These point-to-point channels are used for exchanging mRSA signing requests and responses between
 devices. Moreover, we can use them for replicating information that we want stored on all devices:
 each of the user's devices maintains a local database containing public key fingerprints of all of
-the user's other devices (for mutual authentication of channels), configuration (e.g. URL of the key
-fragment server), information on which devices are paired (for key revocation purposes), a list of
-all the services they have logged in to (for username autofill), and so on.
+the user's other devices (for mutual authentication of channels), configuration (e.g. URL of the
+mediator), information on which devices are paired (for key revocation purposes), a list of all the
+services they have logged in to (for username autofill), and so on.
 
 Each of the user's devices needs to be able to read and modify this database, and any changes should
 be asynchronously propagated to the other devices. To this end, we can use the point-to-point
@@ -84,12 +84,11 @@ database updates, without requiring user interaction. Every database change must
 device key of the device on which it originated, so that any changes made on a revoked device can be
 rejected, and so that one device can't make changes on another device's behalf.
 
-The key fragment store also needs access to this database in order to correctly authenticate clients
-and process revocation requests. Although the key fragment store cannot authenticate with services
-on behalf of the user, it can track the user's login activity, which may be a privacy concern if the
-key fragment store is hosted by a third party. Thus, users may choose to operate their own key
-fragment store if they wish, although doing so will require technical expertise (see also
-section~\ref{sec:store-security}).
+The mediator also needs access to this database in order to correctly authenticate clients and
+process revocation requests. Although the mediator cannot authenticate with services on behalf of
+the user, it can track the user's login activity, which may be a privacy concern if the mediator is
+hosted by a third party. Thus, users may choose to operate their own mediator if they wish, although
+doing so will require technical expertise (see also section~\ref{sec:mediator-sec}).
 
 \subsection{Bootstrapping}\label{sec:bootstrap}
 
@@ -100,13 +99,12 @@ When someone first starts using Octokey, they go through the following steps:
 Octokey''.
 \item The application generates the user's RSA keypair $(n, d, e)$, as well as the keypair and
 self-signed certificate for that device.
-\item The application contacts a key fragment store of the user's choice (a default may be
-provided) over TLS, using its device certificate for client authentication, and verifying the server
-using well-known certificate authorities (or a pinned public key fingerprint embedded in the
-application).
+\item The application contacts a mediator of the user's choice (a default may be provided) over TLS,
+using its device certificate for client authentication, and verifying the server using well-known
+certificate authorities (or a pinned public key fingerprint embedded in the application).
 \item The application splits the private exponent $d = d_1 + d_2$ such that $d_1$ is a uniformly
 distributed random integer with $0 < d_1 < d$. The device stores $d_1$ locally, sends $d_2$ to the
-key fragment store.
+mediator.
 \item The user has the option of printing off the private key, as a last-resort backup in case all
 of their devices are lost (see section~\ref{sec:theftloss}). Then the application deletes $d$.
 \end{enumerate}
@@ -188,7 +186,7 @@ A malicious device could use this algorithm to determine $d$ by binary search. H
 also many other ways for a malicious device to reconstruct $d$, for example by pairing with a
 colluding device. Thus, we must trust the software on the user's physical devices, and use the fact
 that a device can only initiate the pairing process after it has been authorized by the user. We
-also prohibit the remote key fragment store from initiating the re-pairing process.
+also prohibit the mediator from initiating the re-pairing process.
 
 \subsection{Number of retries}\label{sec:retries}
 
@@ -215,17 +213,17 @@ case the cryptanalytic consequences of such a key restriction need to be studied
 A user should be able to authenticate with services on a semi-trusted device, for example a game
 console at a friend's home, without having to generate key fragments for that device (and thus
 giving the device full access to all of the user's accounts). To this end, we use the fact that a
-signed Octokey authentication request is like a one-time password: it can be given to another device
-in order to authorize one-off access to one particular service.
+signed Octokey mandate is like a one-time password: it can be given to another device in order to
+authorize one-off access to one particular service.
 
-By logging in, the semi-trusted device exchanges the signed authentication request for a session
-identifier (e.g. a cookie), which is destroyed when the user logs out, or after a timeout. In cases
-where the user wants to give a device long-lived access to one service, the device can obtain an
-OAuth~\cite{OAuth} token from the service. This is standard use of OAuth and does not require any
-special support from Octokey.
+By logging in, the semi-trusted device exchanges the mandate for a session identifier (e.g. a
+cookie), which is destroyed when the user logs out, or after a timeout. In cases where the user
+wants to give a device long-lived access to one service, the device can obtain an OAuth~\cite{OAuth}
+token from the service. This is standard use of OAuth and does not require any special support from
+Octokey.
 
-The question is then how to get the signed authentication request onto the device that needs it. We
-propose the following flow:
+The question is then how to get the mandate onto the device that needs it. We propose the following
+flow:
 
 \begin{enumerate}
 \item Steps 1 to 4 are identical to the flow in section~\ref{sec:newdevice}, except that the user
@@ -236,21 +234,20 @@ request.
 \item Using the secure channel that has been set up between the devices, the device requesting login
 sends $c$ and the login URL $u$ to the device that scanned the barcode.
 \item The latter device prompts the user whether they want to allow the device whose barcode they
-just scanned to log in to their account at URL $u$. If yes, they choose the username $r$ to use
-(which may be autofilled from their database of services).
+just scanned to log in to their account at URL $u$. If yes, they select the username $r$ of the
+desired account (which may be autofilled from their database of services).
 \item If the user approves, the device goes through the usual mRSA signing flow to calculate a
-signature $s$, and sends the completed authentication request $(s, c, u, r, n, e)$ to the device
-requesting authentication, using the secure channel. That device sends the authentication request to
-the service to log in.
+signature $s$, and sends the mandate $(s, c, u, r, n, e)$ to the device requesting authentication,
+using the secure channel. That device sends the mandate to the service to log in.
 \end{enumerate}
 
 It is important that the user checks whether the authentication request is for the URL they were
 expecting, because a device could potentially request login for any service. As a usability
-improvement, user could be shown a screenshot of the website at the requested URL, not just the URL
-itself; this would make it visually obvious if the user's banking login is being requested when they
-thought they were logging into an online game. (As before, creating a phishing website with
-imitation design would not work --- in order to obtain a valid authentication request for the user's
-bank, they must supply the real bank's URL.)
+improvement, the user could be shown a screenshot of the website at the requested URL, not just the
+URL itself. This would make it visually obvious if the user's banking login is being requested, when
+they thought they were logging into an online game. (As before, creating a phishing website with
+imitation design would not work --- in order to obtain a valid mandate for the user's bank, they
+must supply the real bank's URL.)
 
 This process for delegated authentication is simple and fast, has fairly small risk of user error,
 and can be implemented with any smartphone. It is significantly more pleasant to use than a password
