@@ -16,16 +16,17 @@
 
 \section{Conclusion}
 
-Octokey does not claim to provide `perfect' security (if such a thing exists); for example, it is
-still susceptible to attacks from malware. However, we argue that it provides better security than
-all commonly-used alternatives (passwords, password managers, and federated authentication methods),
-and provides a better user experience and better flexibility than more secure alternatives
-(hardware-based authenticators, smart cards).
+In this paper, we have introduced the design of Octokey, an authentication system intended for
+consumer internet use cases. We argue that it provides better security than all commonly-used
+alternatives (passwords, password managers, and federated authentication methods), and provides a
+better user experience and better flexibility than more secure alternatives (hardware-based
+authenticators, smart cards).
 
 It is quite simple for service owners to start accepting Octokey as an authentication mechanism,
 since libraries for verifying PKCS\#1 signatures are available for all common programming languages.
 Octokey can also be used alongside passwords or other authentication mechanisms, allowing it to be
-adopted gradually.
+adopted gradually. It does not require any special hardware or any changes to the way online
+services are deployed.
 
 Most of the complexity of Octokey lies in the implementation of the client applications and the
 mediator service. We plan to develop these using an entirely open source model, and to make them
