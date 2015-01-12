@@ -255,8 +255,25 @@ use, and thereafter the username and the identity are associated in the user's d
 
 Identities also allow different device pairing arrangements for different keys. For example, an
 organization's social media accounts may use a key which is shared between all the employees who
-have permission to administer the accounts.
+have permission to administer the accounts, while each employee may also have personal accounts
+which are not shared.
 
 \subsection{Multi-way key splitting}
-\subsection{Security levels}
 
+In section~\ref{sec:revocation} we assumed that the private key is split into two mRSA fragments. In
+principle, a key could be split three (or more) ways, so that authentication would require two
+physical devices plus the mediator. Using two physical devices is a popular enhancement for
+password authentication (called two-factor authentication). Would it make sense to support a similar
+mode in Octokey?
+
+2FA is mainly a protection against weak passwords and reuse of the same password on different sites.
+It does not prevent phishing, and it provides only limited protection against malware (a keylogger
+can steal both the password and the authenticator's token, if it is fast enough). It doesn't even
+strictly enforce using two devices (you can enter your password on the same smartphone as the
+authenticator app is running on).
+
+Octokey does not have the same problems of weak passwords and password reuse, so it does not have
+2FA's primary use case. A three-way key split would provide marginal additional security, as an
+attacker would have to steal two devices and break the human-to-machine authentication step on both
+devices, which may give the user more time to revoke the devices. However, it's not clear whether
+this security gain is significant enough to warrant the inconvenience of having to use two devices.
