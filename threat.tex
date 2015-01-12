@@ -35,10 +35,10 @@ one.
 \subsection{Physical device theft and loss}\label{sec:theftloss}
 
 We assume that the private key material on a device is protected by a human-to-machine
-authentication step, e.g. encrypted with a password. This is not much use against malware, but it
-does help against an attacker who physically steals a device (or a backup of a device's filesystem).
-In section~\ref{sec:ratelimit} we discussed a technique for strengthening this step against brute
-force and dictionary attacks.
+authentication step, e.g. encrypted with a password. Malware may be able to circumvent this step,
+but it does help against an attacker who physically steals a device (or a backup of a device's
+filesystem). In section~\ref{sec:ratelimit} we discussed a technique for strengthening this step
+against brute force and dictionary attacks.
 
 If the user has enrolled another device, they can use that device to revoke the stolen device. If
 the revocation happens before the human-to-machine authentication is broken, no harm is done. If the
@@ -59,14 +59,69 @@ Another risk is that the user may lose access to their services: perhaps an atta
 control of a device uses it to revoke the user's legitimate devices (thus preventing the user from
 stopping the attacker); perhaps the user has only enrolled one or two physical devices, and they are
 stolen simultaneously; perhaps the user's house burns down and all of their devices are lost. To
-allow recovery from such situations, we recommend that users print off their private key on paper
-and store it in a safe place.
+allow recovery from such situations, we recommend that users print off their private key on paper,
+and store it with an organization they trust, such as a bank or attorney.
 
 An open question is whether the recovery key on paper should be the entire key, or a key fragment
 paired with the mediator. The advantage of making it a fragment is that the user can revoke it in
 case the piece of paper is lost or stolen; the disadvantage is that an attacker who gains control of
 a device can also revoke it, and thus lock out the legitimate user. On balance, it is probably
-better to make it irrevocable (see also section~\ref{sec:rotation}).
+better to make the key irrevocable (see also sections~\ref{sec:rotation} and \ref{sec:recovery}).
+
+\subsection{Recovering from key theft}\label{sec:recovery}
+
+We have proposed various safeguards to prevent theft of private keys, but we should also assume that
+some keys will eventually be compromised, for whatever reason. If this happens, the user should have
+a reasonable process for regaining control of their accounts.
+
+A service maintains a list of public keys for each user, and key rotation
+(section~\ref{sec:rotation}) requires that a user who is authenticated with an existing key may add
+a new public key for the same user. However, should a user also be allowed to \emph{remove} a public
+key from their account? We say no, because this could be used by an attacker to lock the legitimate
+user out of their account, which would only make the situation worse for the user.
+
+Once a private key has been stolen, the attacker and the legitimate user both have access to the
+user's accounts. In this situation, we require a mechanism by which the legitimate user can revoke
+the attacker's access, but not vice versa. We imagine two possible solutions:
+
+\begin{itemize}
+\item We could introduce some kind of master key, whose private part is only ever stored offline (on
+paper), and whose public part is given to each service when the user signs up. If a user
+authenticates with this key, they have the authority to replace all existing public keys for that
+user, and thus grant the user a fresh start with a new key. However, would this master key be
+significantly more resilient to theft than the normal private key? Can users be expected to store a
+paper copy of a key securely? What about key rotation? What if the master key is lost?
+\item Alternatively, we could rely on a human resolution process: the user would have to contact
+customer support for each of their services, and convince them that they are the legitimate user and
+not the attacker (e.g. by showing identity documents). The customer support agent would have the
+authority to replace the user's public keys. This process may be vulnerable to social engineering,
+but it also leaves more room for human judgment. Even if a master key is introduced into the
+protocol, some cases will require human resolution anyway (e.g. to help users who can't find their
+master key any more).
+\end{itemize}
+
+\subsection{Detecting key theft}
+
+How do we know that a key has been compromised in the first place? If the attacker starts performing
+actions that attract attention, the user will of course become suspicious, but if the attacker is
+using the key to silently steal confidential information, the user might not notice.
+
+In order to detect unauthorized use of a key, the user's devices can log a record in their database
+every time they create a mandate, and synchronize it across devices to create a complete login
+history. Then we can define an API by which a service can report the history of logins for an
+authenticated user, which is periodically checked by the user's devices. If the history of logins
+reported by the service includes mandates that do not appear in the devices' local history, the
+application can sound the alarm.
+
+To minimize the risk of ``crying wolf'', this feature would need to be very carefully implemented.
+In particular, a device would need to ensure that the log record for a mandate is replicated to
+other devices before the mandate is sent to the service, otherwise a crash of the application could
+result in a mandate used but not logged.
+
+Moreover, services should provide an API for devices to check the current list of public keys for a
+user. The user's devices would also periodically check this, in order to detect an attacker
+registering a new key. These techniques may not detect mandates being created by malware on the
+user's device, but they would nevertheless be useful additional security measures.
 
 \subsection{Network attacks}\label{sec:netattack}
 
@@ -205,26 +260,3 @@ have permission to administer the accounts.
 \subsection{Multi-way key splitting}
 \subsection{Security levels}
 
-% Key escrow service rather than printing stuff off? e.g. define a standard API which your bank can
-% implement; through that API Octokey can automatically submit private keys to the bank when the
-% keys are rotated; to get them out again, you have to show up in person at the bank and show them
-% your passport.
-
-% Sync login history across devices, and compare to login history reported by server, to detect
-% use of a stolen key
-
-
-\subsection{Recovering from key theft}
-
-Prevent denial of service due to rate limiting or due to an attacker revoking a user's active
-devices.
-
-In the worst case, if an attacker manages to get the entire private key (e.g. by stealing or
-compromising two devices that are paired, and breaking the human-to-machine authentication step),
-the user's last resort is to generate a new key and update their accounts on all services, adding
-the new public key and removing the old one. Unfortunately, the same key-swapping can be performed
-by the attacker to lock out the legitimate user.
-
-Therefore, perhaps changing a user's public key on a service should require an additional hurdle,
-e.g. using a recovery key that is only stored on paper but not electronically? Or a key that is
-split 3 ways? But that would make key rotation difficult.

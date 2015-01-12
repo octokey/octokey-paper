@@ -255,3 +255,37 @@ must supply the real bank's URL.)
 This process for delegated authentication is simple and fast, has fairly small risk of user error,
 and can be implemented with any smartphone. It is significantly more pleasant to use than a password
 manager, does not require typing anything, and is more secure.
+
+\subsection{Key rotation}\label{sec:rotation}
+
+A key that is considered strong today may be regarded as weak in future. Key fragments may be left
+on old, rarely-used devices, so the user may forget to revoke them when they are lost or thrown
+away. Security vulnerabilities may from time to time raise fears that private key material may have
+been exposed. For all these reasons, we must assume that every key has a finite lifespan, and build
+mechanisms for key rotation into the Octokey protocol from the start.
+
+We propose adding an expiry date to every user keypair, by default four months after the key's
+creation date. The expiry date is signed with the private key, to prevent tampering, and included in
+the public key that is sent to services. Services must not accept public keys without associated
+expiry date, or keys that have expired.
+
+One month before the user's current key expires, one of the user's devices generates a new key
+(similar to section~\ref{sec:bootstrap}), and distributes key fragments to the user's enrolled
+devices (section~\ref{sec:pairing}). Each service should implement a HTTP API by which a device can
+renew the user's public key: a mandate signed with the user's current key is sufficient
+authorization to add a new public key to that user's account. The old and new key are both accepted
+until the old key expires (see discussion in section~\ref{sec:recovery}).
+
+Thus, a device that lies unused in a box in the user's attic will automatically lose access to the
+user's accounts between one and four months after it was last used. A device whose enrollment has
+lapsed can be re-enrolled. However, devices in active use will not require re-enrollment, because
+they are updated with the latest key before the old key expires.
+
+Our goal is to allow key rotation to happen automatically, with as little user interaction as
+possible. The only main place where user interaction occurs is for printing a backup of the new key
+on paper (see section~\ref{sec:theftloss}). It would be annoying for users to have to print
+something, and take it to their safe storage place, every three months. Perhaps even this could be
+automated: one could imagine banks or attorneys providing an API to which a user can securely submit
+their private key; the bank promises to print it, to store it in a safe, and to return it to the
+user if they authenticate themselves in person (by presenting a passport). Such an API would allow
+key rotation to happen entirely without user interaction.
