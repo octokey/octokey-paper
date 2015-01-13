@@ -22,6 +22,11 @@ alternatives (passwords, password managers, and federated authentication methods
 better user experience and better flexibility than more secure alternatives (hardware-based
 authenticators, smart cards).
 
+Octokey builds on mature, well-understood components such as TLS and RSA, and has similarities to
+the familiar SSH public key authentication protocol. By keeping the new algorithms to a minimum, and
+by using familiar and mature components where possible, we hope that the security characteristics of
+the system will be easily understood by users and implementers.
+
 It is quite simple for service owners to start accepting Octokey as an authentication mechanism,
 since libraries for verifying PKCS\#1 signatures are available for all common programming languages.
 Octokey can also be used alongside passwords or other authentication mechanisms, allowing it to be
@@ -35,5 +40,5 @@ anybody should be free to create alternative implementations if they wish.
 
 Octokey strikes a pragmatic compromise between security and convenience, and strives for a very
 simple user experience with minimal risk of user error. We hope that it can be the viable
-alternative to passwords that has eluded us for so long, and we invite others to join the project,
-give feedback, spread the word, and start working towards a real implementation.
+alternative to passwords that has eluded us for so long. We invite others to join the project, give
+feedback, spread the word, and start working towards a real implementation.

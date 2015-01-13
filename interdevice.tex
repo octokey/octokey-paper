@@ -36,7 +36,7 @@ symmetric.
 
 However, there is a practical problem: it can be difficult to establish a peer-to-peer TCP
 connection between two arbitrary devices, as they may be on different networks, behind firewalls,
-and they may often be offline -- and rarely online at the same time. Thus, rather than performing
+and they may often be offline -- and rarely online at the same time. Thus, in addition to performing
 TLS over TCP, we propose using an alternative transport layer in the form of a store-and-forward
 service.
 
@@ -82,7 +82,7 @@ protocol}) \cite{Demers89} for disseminating database changes. \emph{Version vec
 and \emph{CRDTs}~\cite{Shapiro11} can automatically resolve any conflicts between concurrent
 database updates, without requiring user interaction. Every database change must be signed with the
 device key of the device on which it originated, so that any changes made on a revoked device can be
-rejected, and so that one device can't make changes on another device's behalf.
+rejected, and so that one device cannot make changes on another device's behalf.
 
 The mediator also needs access to this database in order to correctly authenticate clients and
 process revocation requests. Although the mediator cannot authenticate with services on behalf of
@@ -106,15 +106,15 @@ need to have the entire key in one place anyway. See section~\ref{sec:theftloss}
 using its device certificate for client authentication, and verifying the server using well-known
 certificate authorities (or a pinned public key fingerprint embedded in the application).
 \item The application splits the private exponent $d = d_1 + d_2$ such that $d_1$ is a uniformly
-distributed random integer with $0 < d_1 < d$. The device stores $d_1$ locally, sends $d_2$ to the
-mediator.
-\item The user has the option of printing off the private key, as a last-resort backup in case all
-of their devices are lost (see section~\ref{sec:theftloss}). Then the application deletes $d$.
+distributed random integer with $0 < d_1 < d$. The device stores $d_1$ locally, and sends $d_2$ to
+the mediator.
+\item The user has the option of printing the private key on paper, as a last-resort backup in case
+all of their devices are lost (see section~\ref{sec:theftloss}). Then the application deletes $d$.
 \end{enumerate}
 
 \subsection{Enrolling a new device}\label{sec:newdevice}
 
-When the user already has set up Octokey on one or more devices, and wishes to enroll another
+When the user has already set up Octokey on one or more devices, and wishes to enroll another
 physical device (i.e. pair a new device with their existing devices), they proceed as follows:
 
 \begin{enumerate}
@@ -151,10 +151,11 @@ Devices which are enrolled later do not require a camera, only a screen. For exa
 or an automobile on-board computer may not have a camera, but they can nevertheless be enrolled if
 they have an internet connection.
 
-Bluetooth or NFC are less suitable for initiating device enrollment, because they carry a higher
-risk of accidentally enrolling the wrong device, including an attacker's device (see also
-section~\ref{sec:barcode-phishing}). However, once a device is enrolled, they can be used safely,
-because the devices know each others' fingerprints and can thus mutually authenticate.
+Bluetooth, NFC or other wireless channels are less suitable for initiating device enrollment,
+because they carry a higher risk of accidentally enrolling the wrong device, including an attacker's
+device (see also section~\ref{sec:barcode-phishing}). However, once a device is enrolled, wireless
+channels can be used safely, because the devices know each others' fingerprints and can thus
+mutually authenticate.
 
 \subsection{Key re-pairing}\label{sec:pairing}
 
@@ -187,9 +188,10 @@ random numbers until a suitable $d_3$ is found.
 
 A malicious device could use this algorithm to determine $d$ by binary search. However, there are
 also many other ways for a malicious device to reconstruct $d$, for example by pairing with a
-colluding device. Thus, we must trust the software on the user's physical devices, and use the fact
-that a device can only initiate the pairing process after it has been authorized by the user. We
-also prohibit the mediator from initiating the re-pairing process.
+colluding device. Thus, we must trust the software on the user's physical devices (see
+section~\ref{sec:malware}), and use the fact that a device can only initiate the pairing process
+after it has been authorized by the user. We also prohibit the mediator from initiating the
+re-pairing process.
 
 \subsection{Number of retries}\label{sec:retries}
 
@@ -249,8 +251,8 @@ expecting, because a device could potentially request login for any service. As 
 improvement, the user could be shown a screenshot of the website at the requested URL, not just the
 URL itself. This would make it visually obvious if the user's banking login is being requested, when
 they thought they were logging into an online game. (As before, creating a phishing website with
-imitation design would not work --- in order to obtain a valid mandate for the user's bank, they
-must supply the real bank's URL.)
+imitation design would not work --- in order to obtain a valid mandate for the user's bank, an
+attacker must supply the real bank's URL.)
 
 This process for delegated authentication is simple and fast, has fairly small risk of user error,
 and can be implemented with any smartphone. It is significantly more pleasant to use than a password

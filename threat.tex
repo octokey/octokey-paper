@@ -36,16 +36,16 @@ one. The implementation can draw from the experience of password managers.~\cite
 
 We assume that the private key material on a device is protected by a human-to-machine
 authentication step, e.g. encrypted with a password. Malware may be able to circumvent this step,
-but it does help against an attacker who physically steals a device (or a backup of a device's
-filesystem). In section~\ref{sec:ratelimit} we discussed a technique for strengthening this step
-against brute force and dictionary attacks.
+but the authentication protects against an attacker who physically steals a device (or a backup of a
+device's filesystem). In section~\ref{sec:ratelimit} we discussed a technique for strengthening this
+step against brute force and dictionary attacks.
 
 If the user has enrolled another device, they can use that device to revoke the stolen device. If
 the revocation happens before the human-to-machine authentication is broken, no harm is done. If the
 device is not revoked in time, the attacker can sign arbitrary mandates, and steal the key by
 enrolling another device and pairing it with the stolen device. The risk of key theft can be
-mitigated by prompting the user on several devices before enrolling another device (provided that
-the user has previously enrolled several devices).
+mitigated by prompting the user on several devices before allowing a new device to be enrolled
+(provided that the user has previously enrolled several devices).
 
 If an attacker steals two devices that are paired with each other, the risk of key theft is much
 greater, because the human-to-machine authentication is the only remaining protection: deleting key
@@ -96,7 +96,7 @@ customer support for each of their services, and convince them that they are the
 not the attacker (e.g. by showing identity documents). The customer support agent would have the
 authority to replace the user's public keys. This process may be vulnerable to social engineering,
 but it also leaves more room for human judgment. Even if a master key is introduced into the
-protocol, some cases will require human resolution anyway (e.g. to help users who can't find their
+protocol, some cases will require human resolution anyway (e.g. to help users who cannot find their
 master key any more).
 \end{itemize}
 
@@ -157,7 +157,7 @@ screen.
 An attacker can thus connect to the URL in the barcode, and enroll the new device to the attacker's
 account, instead of the user's own account as intended. With delegated login, the attacker can get
 the user to log in with the attacker's key rather than the user's own key. This does not compromise
-the user's key, but if the user logs in to the wrong account and doesn't realize it, they may
+the user's key, but if the user logs in to the wrong account and does not realize it, they may
 inadvertently disclose sensitive information to the attacker while using the account.
 
 It is not clear whether this would be a problem in practice. If it is, a mutual authentication step
@@ -223,7 +223,7 @@ possible, and thus exchange any messages that may have been lost.
 In the discussion above we have assumed that each user has only one keypair, i.e. that the same
 public key is sent to every service where the user wants to authenticate. However, this raises a
 privacy problem: services can easily detect whether two different accounts are owned by the same
-person.
+person (the accounts become \emph{linkable}).
 
 We believe that pseudonymous usage of services should be possible, since it is beneficial for free
 speech, separation of work and personal life, avoiding harrassment, etc. One approach would be for
@@ -239,7 +239,7 @@ of services, this would be impractical. Restoring access after key loss would re
 scanning or re-entering each service's key, which is also impractical.
 \item The same service may use several different URLs: for example, one for the desktop website,
 another for the mobile site, and perhaps custom URI schemes for invoking native apps. Octokey
-wouldn't know which URLs/URIs belong to the same service, so it would generate a key for each, and
+cannot know which URLs/URIs belong to the same service, so it would generate a key for each, and
 cross-app login would not work as expected.
 \item In some cases, users may want to prove that several accounts are in fact owned by the same
 person --- for example, Keybase\footnote{\url{https://keybase.io/}} exists for this purpose. In this
@@ -258,7 +258,7 @@ organization's social media accounts may use a key which is shared between all t
 have permission to administer the accounts, while each employee may also have personal accounts
 which are not shared.
 
-\subsection{Multi-way key splitting}
+\subsection{Multi-way key splitting}\label{sec:multiway}
 
 In section~\ref{sec:revocation} we assumed that the private key is split into two mRSA fragments. In
 principle, a key could be split three (or more) ways, so that authentication would require two
@@ -268,8 +268,8 @@ mode in Octokey?
 
 2FA is mainly a protection against weak passwords and reuse of the same password on different sites.
 It does not prevent phishing, and it provides only limited protection against malware (a keylogger
-can steal both the password and the authenticator's token, if it is fast enough). It doesn't even
-strictly enforce using two devices (you can enter your password on the same smartphone as the
+can steal both the password and the authenticator's token, if it is fast enough). Even use of two
+devices is not strictly enforced (you can enter your password on the same smartphone as the
 authenticator app is running on).
 
 Octokey does not have the same problems of weak passwords and password reuse, so it does not have

@@ -25,8 +25,8 @@ machine-to-machine authentication. Any improvements in biometric sensors, for ex
 require any changes to the Octokey protocol or any support by service providers.
 
 If a password is used to decrypt the user's private key, they need only remember a single password
-per device (or perhaps per keypair), but not a separate password for every service where they have
-an account. We believe that a single password is an acceptable user experience.
+per device, but not a separate password for every service where they have an account. We believe
+that a single password is an acceptable user experience.
 
 \subsection{Authentication mandates}
 
@@ -81,14 +81,12 @@ log in.
 
 If a device is lost, stolen or compromised, this scheme allows the user to revoke that device's
 login capability: every device that is paired with the lost device must be instructed to delete the
-key fragment corresponding to the lost device. When all the paired fragments have been deleted, the
-key fragments on the lost device become useless. Thus, even if the human-to-machine authentication
-is weak, not all is lost: the user only needs to revoke the lost device's key fragments faster than
-an attacker can break the human-to-machine authentication.
+key fragment from the pairing with the lost device. When all the paired fragments have been deleted,
+the key fragments on the lost device become useless. Thus, even if the human-to-machine
+authentication is weak, not all is lost: the user only needs to revoke the lost device's key
+fragments faster than an attacker can break the human-to-machine authentication.
 
-A key could also be split into more than two fragments, which would protect against the case where
-an attacker manages to steal two or more devices. However, this comes at the cost of a more
-cumbersome user experience, so we concentrate on the two-fragment case for now.
+A key could also be split into more than two fragments; we discuss this in section~\ref{sec:multiway}.
 
 \subsection{The mediator service}\label{sec:mediator}
 
@@ -128,7 +126,7 @@ of determining whether a password guess is correct. However, a key fragment is j
 distributed random number; by itself, the correctly decrypted key fragment is indistinguishable from
 the garbage that results from trying to decrypt with the wrong password.\footnote{If the encryption
 uses a block cipher, the key fragment must be padded with random bits up to the block size. Padding
-with zeros would leak information on whether a password guess was correct.}
+with a predictable bit pattern would leak information on whether a password guess was correct.}
 
 Assuming the attacker has no other key fragments, they can only determine whether the password guess
 was correct by communicating with the mediator and testing whether they are able to construct a
@@ -162,21 +160,19 @@ would help them guess the password.
 The values $(c, u, r)$ are hashed twice so that the mediator cannot use the signature to generate
 any mandates on behalf of the user.
 
-This protection only works if the attacker does not have any knowledge of previous requests to the
-mediator. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a response) for any $x$, they
-can brute-force the password without contacting the mediator, and thus circumvent the rate-limiting.
-It is therefore important that communication with the mediator is protected from eavesdropping
-(using TLS) and is not logged on the device.
+This protection against password guessing only works if the attacker does not have any knowledge of
+previous requests to the mediator. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a
+response) for any $x$, they can brute-force the password without contacting the mediator, and thus
+circumvent the rate-limiting.  It is therefore important that communication with the mediator is
+protected from eavesdropping (using TLS) and is not logged on the device.
 
 \subsection{Channel binding and preventing MITM}\label{sec:channelbinding}
 
-Once a device has assembled a signature for a mandate, it has the function of a one-time password:
-if an attacker can intercept the mandate before it reaches the intended service, the attacker can
-use it to impersonate the user. It is therefore essential that the mandate is sent over TLS.
-
-However, TLS connections are susceptible to man-in-the-middle attacks using forged TLS certificates,
-due to users ignoring warnings about invalid certificates, or due to malware. Such incidents have
-been observed in practice.~\cite{Huang14, Adkins11}
+TLS connections are susceptible to man-in-the-middle attacks -- using forged TLS certificates, due
+to users ignoring warnings about invalid certificates, or due to malware. Such incidents have been
+observed in practice.~\cite{Huang14, Adkins11} An attacker who succeeds in establishing a MITM
+position can steal signed mandates, and use them to impersonate the user. Can we secure the
+connection between the device and the service against MITM?
 
 Some authentication methods such as SCRAM-SHA-1-PLUS~\cite{SCRAM} use \emph{channel binding} to
 prevent MITM attacks. For example, the \texttt{tls-unique} channel binding type works by hashing the
@@ -188,14 +184,16 @@ connection, then a mandate is rendered invalid by the presence of a MITM.
 
 Origin-Bound Certificates~\cite{Dietz12} generalize this idea to the web, creating a channel
 binding that is not tied to a particular TCP connection. When a client first connects to a
-particular domain name, it automatically creates a TLS client certificate (without any user
+particular domain name, it automatically creates a self-signed TLS certificate (without any user
 interaction) and presents it to the server. This certificate does not have any authentication
-purpose, but the fingerprint of the certificate can be incorporated as channel identifier into a
-mandate.
+purpose, but the fingerprint of the certificate could be incorporated into a mandate as a channel
+binding.
 
-While channel binding would yield a significant improvement in security, it would also make the
-protocol much harder to deploy, both on the client and on the server side. It would therefore likely
-have to be an optional extension.
+APIs for accessing TLS channel bindings and creating TLS certificates are currently not readily
+available in web browsers and in HTTP server implementations. Thus, while channel binding would
+yield a significant improvement in security, it would also make the protocol much harder to deploy,
+both on the client and on the server side. It would therefore likely have to be an optional
+extension.
 
 An alternative effort to prevent MITM is the Certificate Transparency project~\cite{CertTrans},
 which aims to strengthen trust in the PKI by providing a public audit log of issued certificates,
