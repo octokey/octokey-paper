@@ -64,8 +64,10 @@ These point-to-point channels are used for exchanging mRSA signing requests and 
 devices. Moreover, we can use them for replicating information that we want stored on all devices:
 each of the user's devices maintains a local database containing public key fingerprints of all of
 the user's other devices (for mutual authentication of channels), configuration (e.g. URL of the
-mediator), information on which devices are paired (for key revocation purposes), a list of all the
-services they have logged in to (for username autofill), and so on.
+mediator), and information on which devices are paired (for key revocation purposes). In addition,
+the user's physical devices maintain a database of usernames on all the user's services (for
+username autofill), although this should not be replicated to the mediator, to protect the user's
+privacy.
 
 Each of the user's devices needs to be able to read and modify this database, and any changes should
 be asynchronously propagated to the other devices. To this end, we can use the point-to-point
@@ -83,12 +85,6 @@ and \emph{CRDTs}~\cite{Shapiro11} can automatically resolve any conflicts betwee
 database updates, without requiring user interaction. Every database change must be signed with the
 device key of the device on which it originated, so that any changes made on a revoked device can be
 rejected, and so that one device cannot make changes on another device's behalf.
-
-The mediator also needs access to this database in order to correctly authenticate clients and
-process revocation requests. Although the mediator cannot authenticate with services on behalf of
-the user, it can track the user's login activity, which may be a privacy concern if the mediator is
-hosted by a third party. Thus, users may choose to operate their own mediator if they wish, although
-doing so will require technical expertise (see also section~\ref{sec:mediator-sec}).
 
 \subsection{Bootstrapping}\label{sec:bootstrap}
 
@@ -242,8 +238,9 @@ sends $c$ and the login URL $u$ to the device that scanned the barcode.
 just scanned to log in to their account at URL $u$. If yes, they select the username $r$ of the
 desired account (which may be autofilled from their database of services).
 \item If the user approves, the device goes through the usual mRSA signing flow to calculate a
-signature $s$, and sends the mandate $(s, c, u, r, n, e)$ to the device requesting authentication,
-using the secure channel. That device sends the mandate to the service to log in.
+signature $s$, and sends the mandate $s \concat c \concat u \concat r \concat n \concat e$ to the
+device requesting authentication, using the secure channel. That device sends the mandate to the
+service to log in.
 \end{enumerate}
 
 It is important that the user checks whether the authentication request is for the URL they were
@@ -266,10 +263,10 @@ away. Security vulnerabilities may from time to time raise fears that private ke
 been exposed. For all these reasons, we must assume that every key has a finite lifespan, and build
 mechanisms for key rotation into the Octokey protocol from the start.
 
-We propose adding an expiry date to every user keypair, by default four months after the key's
-creation date. The expiry date is signed with the private key, to prevent tampering, and included in
-the public key that is sent to services. Services must not accept public keys without associated
-expiry date, or keys that have expired.
+As described in section~\ref{sec:mandates}, every user keypair has an expiry date. We propose making
+this four months after the key's creation date by default. Services must not accept public keys
+without associated expiry date, or keys that have expired, or keys with an invalid signature on the
+expiry date.
 
 One month before the user's current key expires, one of the user's devices generates a new key
 (similar to section~\ref{sec:bootstrap}), and distributes key fragments to the user's enrolled

@@ -28,31 +28,44 @@ If a password is used to decrypt the user's private key, they need only remember
 per device, but not a separate password for every service where they have an account. We believe
 that a single password is an acceptable user experience.
 
-\subsection{Authentication mandates}
+\subsection{Authentication mandates}\label{sec:mandates}
 
 Each user has a RSA keypair $(n, d, e)$ where $n$ is the modulus, $d$ is the private exponent and
-$e$ is the public exponent. When signing up to a service, the user submits their public key
-$(n, e)$ to the service. The service stores the public key as part of the user record.
+$e$ is the public exponent. A key also has an expiry date $\mathit{ex}$, which is chosen when the
+key is generated, and which is signed with the private key using a PKCS\#1 signature. The expiry is
+used to rotate the user's keypair periodically (see section~\ref{sec:rotation}).
 
-To log in, the client first requests a challenge $c$ from the service via a HTTP endpoint. It then
-calculates $m = H(c, u, r)$ where $u$ is the URL of the service endpoint and $r$ is the user's
-registered username. $H$ encodes its arguments as a binary string and then applies the
-\textsc{EMSA-PSS-Encode} operation (hashing and padding) as defined in PKCS\#1.~\cite{PKCS1} From
-that, the RSA signature can be calculated as $s = m^d \mod n$.
+When signing up to a service, the user submits their public key $n \concat e \concat \mathit{ex}$ to
+the service. The symbol $\concat$ denotes encoding and concatenating the values into a byte string.
+The service verifies the signature on $\mathit{ex}$ and stores the public key as part of the user
+record. The service may have multiple public keys on record for a user, and should allow any one of
+those keys to authenticate as the user.
 
-The client then constructs the \emph{mandate}, which is an encoding of the tuple
-$(s, c, u, r, n, e)$. The mandate is sent to the server as part of a HTTP request over TLS, and is
-handled at the application layer. The server can verify the mandate by checking that all of the
-following are true:
+To log in, the user's client first requests a challenge $c$ from the service via a HTTP
+endpoint.\footnote{The format and contents of the challenge are unspecified -- the client treats it
+as an opaque byte string. However, we suggest that a service constructs a challenge from a
+timestamp $t$, a nonce $x$ and a secret key $K$ that is known only to the service:
+$c = t \concat x \concat \mathrm{HMAC}(K, t \concat x)$. The HMAC can be used to check that the
+challenge was issued by this service, $t$ can be used to verify freshness, and $x$ prevents reuse of
+a challenge.} It then calculates $m = H(c \concat u \concat r)$ where $u$ is the URL of the service endpoint and
+$r$ is the user's registered username. $H$ is shorthand for the \textsc{EMSA-PSS-Encode} operation
+(hashing and padding) as defined in PKCS\#1.~\cite{PKCS1} The RSA signature can then be calculated
+as $s = m^d \mod n$.
+
+The client then constructs the \emph{mandate}, which is an encoding of the RSA-signed message and
+the user's public key: $$\mathit{mandate} = s \concat c \concat u \concat r \concat n \concat e.$$
+The mandate is sent to the server as part of a HTTP request over TLS, and is handled at the
+application layer. The server can verify the mandate by checking that all of the following are true:
 \begin{itemize}
-\item $s$ is a valid PKCS\#1 signature of the values $(c, u, r)$, checked against the public key
-$(n, e)$.
+\item $s$ is a valid PKCS\#1 signature of the message $c \concat u \concat r$, checked against the
+public key $(n, e)$.
 \item $c$ is a valid challenge issued by this service, has not been used for login before, and is
 not older than some maximum age. This prevents replay attacks.
 \item $u$ is a valid URL for this service. A login request for an unknown URL must be rejected.
 This prevents phishing-like attacks, whereby an attacker creates an imitation website under a
 similar-looking URL and tricks the user into logging in.
-\item $r$ is a registered username for this service, and $(n, e)$ is a public key for that user.
+\item $r$ is a registered username for this service, and $(n, e, \mathit{ex})$ is a public key for
+that user, and $\mathit{ex}$ is not expired.
 \end{itemize}
 If the mandate is successfully verified, the user is logged in by the server in the usual manner,
 for example by setting an appropriate session cookie.
@@ -73,11 +86,13 @@ $$s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n$$ provided that $d = d_a + d_
 If two devices $a$ and $b$ each have a key fragment $d_a$ and $d_b$ respectively, and those
 fragments sum to the private exponent $d$, then we call those devices \emph{paired}. In order to
 generate a valid signature, any two paired devices need to collaborate. If device $a$ wants to
-generate a mandate, it can send $(c, u, r)$ to device $b$, which may first ask the user to confirm
-whether they wish to log in to URL $u$ using username $r$. If yes, $b$ calculates
-$H(c, u, r)^{d_b} = m^{d_b}$ and returns that value to $a$. Then $a$ can calculate
-$s = m^{d_a} m^{d_b}$ by using its own key fragment $d_a$ and the value returned by $b$, and thus
-log in.
+generate a mandate, it can send a signing request $\mathit{req}$ to device $b$:
+$$\mathit{req} = H(c \concat u \concat r) \concat n \concat e$$
+where the public key $(n, e)$ indicates which key should be used, in case device $b$ stores multiple
+keys. Device $b$ then uses its key fragment $d_b$ to calculate a response:
+$$\mathit{resp} = H(c \concat u \concat r)^{d_b} = m^{d_b}$$
+and returns $\mathit{resp}$ to $a$. Now, $a$ can calculate $s = m^{d_a} m^{d_b}$ by using its own
+key fragment $d_a$ and $\mathit{resp}$, construct a mandate with a valid signature, and thus log in.
 
 If a device is lost, stolen or compromised, this scheme allows the user to revoke that device's
 login capability: every device that is paired with the lost device must be instructed to delete the
@@ -105,8 +120,10 @@ automatically behind the scenes.
 
 The mediator need only be partially trusted. It cannot authenticate as the user without the
 cooperation of one of the user's physical devices. The user only needs to trust the mediator to not
-collude with attackers who steal devices, and to delete key fragments when the user requires key
-revocation.
+collude with attackers who steal devices, and to correctly delete key fragments when the user
+requires key revocation. The user's privacy is protected by hashing the message $c \concat u \concat r$
+before sending it to the mediator, so it does not learn which services the user is logging in to,
+or which usernames they are using.
 
 From the point of view of a service that accepts Octokey login, the mediator does not even exist: a
 service simply verifies the RSA signature on a mandate, and does not care how that signature was
@@ -144,21 +161,39 @@ $$\mathit{efrag} = \mathrm{encrypt}(\mathrm{PBKDF2}(\mathit{pass}), d_a).$$
 The attacker now guesses $\mathit{pass}^\prime$ and computes a guess $d_a^\prime$ of the plaintext:
 $$d_a^\prime = \mathrm{decrypt}(\mathrm{PBKDF2}(\mathit{pass}^\prime), \mathit{efrag})$$
 To check whether $d_a^\prime = d_a$ the attacker needs to contact the mediator where $d_b$ is held.
-We previously said that a signing request to the mediator consists of $(c, u, r)$. We now extend
-this to require an additional parameter:
-$$\left(c, u, r, H(H(c, u, r))^{d_a^\prime}\right)$$
-The additional parameter allows the mediator to verify whether the client's $d_a^\prime$ is
-correctly decrypted, without revealing $d_a^\prime$ or the password. The mediator simply uses its
-own $d_b$ to compute $$H(H(c, u, r))^{d_a^\prime}H(H(c, u, r))^{d_b}$$ and checks whether the result
-is a valid PKCS\#1 signature for the user's public key $(n, e)$.
 
-If the signature is valid, the mediator computes $H(c, u, r)^{d_b}$ as before, and returns it to the
-client. If the signature is not valid, the mediator returns ``bad signature''. The attacker learns
+We modify the mediator's request processing as follows:
+\begin{enumerate}
+\item In addition to the signing request $\mathit{req}$, the client is required to submit a
+signature $s_\mathit{req}$:
+\begin{align*}
+    \mathit{req} &= H(c \concat u \concat r) \concat n \concat e \\
+    s_\mathit{req} &= H(\mathit{req} \concat \mathit{cb})^{d_a^\prime}
+\end{align*}
+where $\mathit{cb}$ is the \texttt{tls-unique} channel binding~\cite{ChannelBinding}
+of the TLS connection between the client and the mediator. Channel binding is further discussed in
+section~\ref{sec:channelbinding}.
+\item The mediator queries its database for a key fragment $d_b$ belonging to the user with public
+key $(n, e)$. If the device uses a TLS client certificate when connecting to the mediator (see
+section~\ref{sec:channels}), it can retrieve the key fragment for the authenticated client device.
+\item Using the channel binding $\mathit{cb}^\prime$ of the TLS connection's server side, the
+mediator computes
+$$s_\mathit{req} H(\mathit{req} \concat \mathit{cb}^\prime)^{d_b} =
+  H(\mathit{req} \concat \mathit{cb})^{d_a^\prime} H(\mathit{req} \concat \mathit{cb}^\prime)^{d_b}$$
+and checks whether the result is a valid PKCS\#1 signature of
+$\mathit{req} \concat \mathit{cb}^\prime$ for the user's public key $(n, e)$. This check succeeds if
+$d_a^\prime = d_a$ (i.e. the user's password was correct), and if $\mathit{cb}^\prime = \mathit{cb}$
+(preventing MITM and replay attacks).
+\item If the signature is valid, the mediator computes
+$\mathit{resp} = H(c \concat u \concat r)^{d_b}$ as before, and returns it to the client. If the
+signature is not valid, the mediator returns ``bad signature''. A password-guessing attacker learns
 that the password guess $\mathit{pass}^\prime$ was incorrect, but otherwise nothing is revealed that
 would help them guess the password.
+\end{enumerate}
 
-The values $(c, u, r)$ are hashed twice so that the mediator cannot use the signature to generate
-any mandates on behalf of the user.
+Note that although the mediator computes an RSA signature using the user's private key, the value
+being signed ($\mathit{req} \concat \mathit{cb}$) cannot be used to construct a mandate, so the
+mediator cannot log in to services on the user's behalf.
 
 This protection against password guessing only works if the attacker does not have any knowledge of
 previous requests to the mediator. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a
@@ -190,10 +225,13 @@ purpose, but the fingerprint of the certificate could be incorporated into a man
 binding.
 
 APIs for accessing TLS channel bindings and creating TLS certificates are currently not readily
-available in web browsers and in HTTP server implementations. Thus, while channel binding would
-yield a significant improvement in security, it would also make the protocol much harder to deploy,
-both on the client and on the server side. It would therefore likely have to be an optional
-extension.
+available in web browsers and in HTTP server implementations. Thus, while channel binding for
+Octokey mandates would yield a significant improvement in security, it would also make the protocol
+much harder to deploy, both on the client and on the server side. We therefore propose making it an
+optional extension.\footnote{For the communication between Octokey clients and mediator, as
+described in section~\ref{sec:ratelimit}, we do require channel binding. As this protocol only needs
+to be implemented in the Octokey software, not by every service that accepts Octokey as
+authentication mechanism, the burden of deployment is much smaller.}
 
 An alternative effort to prevent MITM is the Certificate Transparency project~\cite{CertTrans},
 which aims to strengthen trust in the PKI by providing a public audit log of issued certificates,
