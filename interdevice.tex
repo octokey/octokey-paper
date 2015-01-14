@@ -141,17 +141,16 @@ obtain key fragments.
 This interaction flow assumes that the first physical device on which the user sets up their private
 key has a camera. This is plausible, since many laptops and smartphones come with built-in cameras
 today. In the case where no camera is available, the user can type in the contents of the barcode in
-textual form.
+textual form. Devices which are enrolled later do not require a camera, only a screen. For example,
+a game console or an automobile on-board computer may not have a camera, but they can nevertheless
+be enrolled.
 
-Devices which are enrolled later do not require a camera, only a screen. For example, a game console
-or an automobile on-board computer may not have a camera, but they can nevertheless be enrolled if
-they have an internet connection.
-
-Bluetooth, NFC or other wireless channels are less suitable for initiating device enrollment,
-because they carry a higher risk of accidentally enrolling the wrong device, including an attacker's
-device (see also section~\ref{sec:barcode-phishing}). However, once a device is enrolled, wireless
-channels can be used safely, because the devices know each others' fingerprints and can thus
-mutually authenticate.
+If the user's existing device does not have internet access, and thus cannot reach the URL in the
+barcode, the devices can set up the secure channel over a local wireless medium such as
+Bluetooth, NFC or 802.11/WiFi instead. The necessary information to establish this connection can be
+included in the barcode. We require that the enrollment is initiated using the barcode, and not
+through the wireless medium, to ensure that an attacker cannot tamper with the public key
+fingerprint (see also section~\ref{sec:barcode-phishing}).
 
 \subsection{Key re-pairing}\label{sec:pairing}
 
