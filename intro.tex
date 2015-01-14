@@ -37,14 +37,16 @@ is no generally agreed boundary between `important' and `unimportant' services, 
 authentication system should be able to support both use cases.
 \end{enumerate}
 
-In the next section we discuss various authentication systems that are used on the web, and explain
-why none of them meet these requirements. We then introduce Octokey, an authentication protocol
-which addresses these issues. We believe that Octokey could be a viable solution to online
-authentication in the near future, and we seek the information security community's feedback to
-refine this proposal.
+The rest of this paper is structured as follows: in section~\ref{sec:incumbents} we discuss the
+advantages and disadvantages of various existing authentication methods, and in
+section~\ref{sec:protocol} we introduce Octokey, a new protocol by which websites and online
+services can authenticate users. In section~\ref{sec:interdevice} we discuss the communication
+amongst several devices owned by the same user. Our threat model and various design trade-offs are
+discussed in section~\ref{sec:threat}, and in section~\ref{sec:otherapproaches} we compare Octokey
+to other proposals for authentication protocols.
 
-\section{Existing systems}
-\subsection{Passwords}
+\section{Existing systems}\label{sec:incumbents}
+\subsection{Passwords}\label{sec:passwords}
 
 Passwords have many of the desirable properties mentioned above: no dependence on any third party,
 pseudonymity, simplicity of implementation, familiarity and cross-device compatibility. However,
@@ -73,13 +75,14 @@ type the master passphrase of their password manager into the untrusted computer
 decrypt the password database. This has the effect of exposing the user's entire password database
 to an attacker running malware on the untrusted computer.
 
-\subsection{One-time passwords and two-factor authentication}
+\subsection{One-time passwords and 2FA}\label{sec:otp}
 
 One-time passwords (OTPs) are a big security improvement over regular passwords. The user must
 download a list of one-time passwords on a trusted device, or register a cryptographic device that
-generates a pseudorandom sequence of OTPs, or register an email address or phone number to which
-OTPs can be sent on demand. Some services allow use of OTPs as sole authentication mechanism, while
-others use them in conjunction with a regular password (two-factor authentication).
+generates a pseudorandom sequence of OTPs~\cite{TOTP}, or register an email address or phone number
+to which OTPs can be sent on demand. Some services allow use of OTPs as sole authentication
+mechanism, while others use them in conjunction with a regular password (two-factor authentication,
+2FA).
 
 The advantage of OTPs is that the exposure to attacks is limited to a single service, and ends when
 the user clicks the logout button (assuming the session is correctly invalidated on the server, and
@@ -90,14 +93,15 @@ However, OTPs are so inconvenient to use that very few services are willing to a
 only or primary authentication mechanism, and only the most security-conscious users are willing to
 use them. Moreover, the common ``remember me on this device'' feature weakens two-factor
 authentication (attackers just need to steal the ``remember me'' cookie as well as keylogging the
-password).
+password). OTPs are also prone to phishing, just like regular passwords.
 
-OTPs sent on demand via email or SMS also have the effect of `outsourcing' the authentication to the
+OTPs sent on demand via email or SMS have the effect of `outsourcing' the authentication to the
 email provider or the mobile network provider, respectively: any attacker who can access the email
-provider or SMS messages can also gain access to any service using on-demand OTPs. This essentially
-makes them federated login schemes (see next section).
+provider or SMS messages can also gain access to any service using on-demand OTPs. The same is true
+if users can reset their password via a confirmation email. This essentially makes them federated
+authentication schemes (see section~\ref{sec:federated}).
 
-\subsection{Federated identity}
+\subsection{Federated authentication}\label{sec:federated}
 
 OpenID~\cite{OpenID} is probably the best-known attempt to remove the need for a separate password
 on every service. Some identity providers, such as Google Federated Login~\cite{GoogleOpenID} and
@@ -107,8 +111,8 @@ delegates authentication to the user's email provider (or a fallback service pro
 
 Such federated authentication protocols do not solve the fundamental problem of authentication: they
 only delegate it to the identity provider, who must then use some other authentication method (most
-commonly a password, possibly in conjunction with a hardware token). This means that all the
-problems discussed above apply to the identity provider, with an additional privilege escalation
+commonly a password, possibly in conjunction with a OTP from a hardware token). This means that all
+the problems discussed above apply to the identity provider, with an additional privilege escalation
 problem: if an attacker gains access to the user's account with the identity provider, they can
 access any account associated with that identity. Like with a password manager, a single user error
 can lead to all of a user's accounts being compromised.
@@ -131,8 +135,8 @@ that a user will ever be able to use a single identity provider across all servi
 TLS~\cite{TLS} provides a mechanism for a client to authenticate itself to the server using a X.509
 certificate. The server may specify the certificate authority from which it is willing to accept
 certificates. By calculating a signature over the TLS key exchange messages, client certificate
-authentication also provides protection against man-in-the-middle attacks (a signature generated on
-one TLS connection cannot be reused on another TLS connection).
+authentication also provides protection against man-in-the-middle attacks (a MITM cannot receive a
+certificate on one TLS connection and relay it to another TLS connection).
 
 Client certificates are a good solution in situations where the physical identity of the user is
 important: certificates might be issued by a government to its citizens (for filing taxes online),

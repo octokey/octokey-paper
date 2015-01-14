@@ -1,4 +1,4 @@
-\section{Octokey protocol overview}
+\section{Octokey protocol overview}\label{sec:protocol}
 
 Octokey is a user authentication protocol designed to meet the goals stated in the introduction. It
 aims to provide good security in a software-only configuration, with cryptographic hardware modules
@@ -7,8 +7,8 @@ decentralized, there is no dependency on any identity provider, and the extent t
 certificate authorities need to be trusted is minimized as far as possible.
 
 The basic operation of Octokey is inspired by SSH public key authentication, which is widely used
-for shell access to remote servers. When using Octokey for the first time, a user must generate a
-RSA keypair.\footnote{We hope that the approach could be extended to support other public-key
+for shell access to remote servers. When using Octokey for the first time, a user generates a RSA
+keypair.\footnote{We hope that the approach could be extended to support other public-key
 cryptosystems such as ECC.} When the user signs up to a service, or migrates from another
 authentication method to Octokey, the user submits their public key to the service. This is
 analogous to creating a password when a user first signs up to a service.
@@ -26,7 +26,7 @@ require any changes to the Octokey protocol or any support by service providers.
 
 If a password is used to decrypt the user's private key, they need only remember a single password
 per device, but not a separate password for every service where they have an account. We believe
-that a single password is an acceptable user experience.
+that a single password (like in a password manager) is an acceptable user experience.
 
 \subsection{Authentication mandates}\label{sec:mandates}
 
