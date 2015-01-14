@@ -52,12 +52,20 @@ remembering a large number of passwords is a big burden on users, and they are h
 human error: use of weak passwords, reuse of the same password across different services, phishing
 attacks and leaks of unhashed or weakly hashed password databases are sadly common.
 
-Password managers built into web browsers, or external password manager products such as 1Password
+Web browsers' built-in password managers, or external password manager products such as 1Password
 and LastPass, make it feasible for users to maintain a strong, unique password for each service they
 use. However, even when a unique password is used, an attacker who succeeds in stealing a password
-(e.g. by phishing, malware, keylogging, man-in-the-middle attack or eavesdropping when it is
-accidentally sent over an unencrypted connection) has access to that user account until the password
-is changed, which is often a long time.
+(e.g. by phishing, malware, keylogging, man-in-the-middle attack, eavesdropping when it is
+accidentally sent over an unencrypted connection, or exploiting a vulnerability in the password
+manager~\cite{Li14, Silver14}) has access to that user account until the password is changed, which
+is often a long time.
+
+If an attacker steals the encrypted password database (perhaps by stealing user's device, or a
+backup of the filesystem), they can mount an offline dictionary or brute-force attack on the
+encryption password. If the user fears the password database may have been stolen, they must
+manually change the password for each of their services, which is laborious if they use many
+services. If an attacker succeeds in breaking the encryption before the passwords are changed, they
+may lock the legitimate user out of their accounts.
 
 Password managers also have grave exposure to human error. For example, consider a user who wishes
 to log in to an `unimportant' website on an untrusted computer. It is very tempting for the user to
