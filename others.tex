@@ -1,18 +1,63 @@
-% \section{Related work}
-%
-% Certivox M-Pin~\cite{Scott14}
-%
-% Resources:
-%
-% https://www.schneier.com/blog/archives/2014/09/security_of_pas.html
-% https://crypton.io/
-% https://www.lightbluetouchpaper.org/2014/10/02/pico-part-iv-somethings-you-have/
-% http://news.engineering.utoronto.ca/bionym-raises-14-million-wearable-password-replacing-tech/
-% https://www.digits.com/
-% http://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-817.pdf (already in Papers)
-% http://www.certivox.com/docs/m-pin-core
-% Microsoft CardSpace http://msdn.microsoft.com/en-us/library/aa480189.aspx?ppud=4
-% SQRL
+\section{Related work}\label{sec:otherapproaches}
+
+In this section we compare Octokey to other cryptographic authentication protocols. Since Octokey
+can be used with various human-to-machine authentication methods (password, biometrics, etc.), we
+concentrate on the machine-to-machine aspect, and refer the reader to the literature for a survey of
+human-to-machine authentication methods~\cite{Bonneau12}.
+
+\subsection{Certivox M-Pin}
+
+Certivox M-Pin~\cite{Scott14} is a cryptographic authentication protocol based on elliptic curves.
+It has some similarities to Octokey: it reconstructs a client secret from a stored token and a
+4-digit PIN (similar to the human-to-machine authentication step in Octokey), and the client proves
+ownership of the secret to the server without revealing the secret.
+
+However, each M-Pin client and server requires a secret that is issued to it by a \emph{trusted
+authority} (TA). This is reasonable in the context of employees authenticating with their company's
+systems, because clients, servers and TA are all controlled by the same organization. In a consumer
+internet context, each service would need to set up its own TA, using hardware security modules to
+protect server secrets, or rely on a TA service hosted by Certivox. This makes server deployment
+more complicated and costly than Octokey, which requires only a simple RSA signature verification,
+and no secrets on the server.
+
+A service that accepts M-Pin login can compute the user's PIN; thus, a rogue service that colludes
+with attackers who steal devices can reconstruct client secrets.\footnote{Unless the user has a
+different PIN for each service, which takes us back to square one.} Moreover, M-Pin does not support
+instantaneous key revocation, only time-based key expiry (``time permits'').
+
+\subsection{2D barcode authentication}
+
+Several previous proposals use 2D barcodes as part of a user authentication flow: for example, tiqr
+(based on OCRA~\cite{OCRA}), eKaay~\cite{Borchert11} and SQRL~\cite{Gibson13} all use 2D barcodes.
+A mobile device obtains a challenge from a service by scanning a barcode, signs that challenge using
+a secret stored on the device, and returns the signed challenge to the service. The secret may be a
+symmetric secret that is shared between client and server~\cite{OCRA} or an asymetric private
+key~\cite{Gibson13}. These proposals have similarities to Octokey's delegated authentication
+(section~\ref{sec:delegation}).
+
+However, these proposals do not have good answers to the issues of key loss, key revocation and
+distribution of keys to new devices. tiqr and eKaay appear to not have any revocation mechanism;
+SQRL's revocation requires the user to retrieve an ``identity unlock key'' that is stored on paper,
+and use it to individually reset their key on every service they use (similar to the master key
+discussed in section~\ref{sec:recovery}). To authenticate on multiple devices, the user must either
+copy the entire secret key to every device, or they must go through the barcode-scanning procedure
+every time they want to authenticate. There is no way of revoking only one device, no easy way of
+enrolling new devices, and no provision for key rotation.
+
+Finally, these proposals do not have a rate limiting mechanism like in section~\ref{sec:ratelimit},
+and rely solely on a slow PBKDF such as Scrypt~\cite{Percival09} to slow down offline attacks on an
+encrypted secret. Depending on the strength of the user's password, this may not be sufficient to
+stop a determined attacker who has stolen an encrypted secret.
+
+\subsection{Other approaches}
+
+Windows CardSpace~\cite{Chappell06} was a user interface and abstraction layer on top of X.509
+certificates and other authentication mechanisms, but it was not successful in the marketplace.
+U-Prove~\cite{Paquin13} is an ambitious project to build a superset of the X.509 PKI using
+zero-knowledge proofs. It significantly more complicated and broader in scope than Octokey, since it
+deals with much more than just authentication, such as the selective disclosure of certificate
+attributes for privacy reasons. We fear that this complexity will prove an obstacle to its practical
+adoption.
 
 \section{Conclusion}
 
