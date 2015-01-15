@@ -187,18 +187,18 @@ software.
 
 \subsection{Online services}\label{sec:mediator-sec}
 
-The mediator and the store-and-forward service are not strictly required from a cryptographic point
-of view: in principle, the user could use Octokey exclusively with physical devices and direct
-device-to-device communication. However, they are very useful for providing a good user experience,
-allowing a user to authenticate using only one physical device, and making inter-device
-communication work ``out of the box''.
+The mediator and the relay are not strictly required from a cryptographic point of view: in
+principle, the user could use Octokey exclusively with physical devices and direct device-to-device
+communication. However, they are very useful for providing a good user experience, allowing a user
+to authenticate using only one physical device, and making inter-device communication work ``out of
+the box''.
 
 From a service owner's point of view, the mediator does not need to be trusted (unlike an OpenID
 identity provider, for example), because a mandate is simply an RSA signature in any case. Thus, the
-choice of mediator and store-and-forward services is entirely up to the user. We propose that a
-public mediator and store-and-forward service should be provided for free, operated by a nonprofit
-foundation. However, technically sophisticated users or organizations may choose to operate their
-own mediators and store-and-forward services, if they wish.
+choice of mediator and relay services is entirely up to the user. We propose that a public mediator
+and relay should be provided for free, operated by a nonprofit foundation. However, technically
+sophisticated users or organizations may choose to operate their own mediators and relays, if they
+wish.
 
 Operating a mediator is not an easy task, since it is likely to become a popular attack target: some
 attackers may want to steal the key fragments and other user data, whereas others may try to disrupt
@@ -212,11 +212,11 @@ have a mechanism by which a mediator operator can force all users to re-pair. Su
 not \emph{per se} expose private keys, but any stolen devices that are not re-paired with a new
 mediator are much more likely to result in key theft.
 
-The store-and-forward service is less critical for security, since it cannot read the contents of
-messages it delivers, and it cannot tamper with them. It can only drop messages instead of
-forwarding them, and thus interrupt the inter-device communication. To guard against this
-possibility, physical devices should also try to connect through local communication channels when
-possible, and thus exchange any messages that may have been lost.
+The relay is less critical for security, since it cannot read the contents of messages it delivers,
+and it cannot tamper with them. It can only drop messages instead of forwarding them, and thus
+interrupt the inter-device communication. To guard against this possibility, physical devices should
+also try to connect through local communication channels when possible, and thus exchange any
+messages that may have been lost.
 
 \subsection{Multiple keypairs per user}\label{sec:identities}
 

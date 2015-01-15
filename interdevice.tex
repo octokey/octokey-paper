@@ -37,26 +37,24 @@ symmetric.
 However, there is a practical problem: it can be difficult to establish a peer-to-peer TCP
 connection between two arbitrary devices, as they may be on different networks, behind firewalls,
 and they may often be offline -- and rarely online at the same time. Thus, in addition to performing
-TLS over TCP, we propose using an alternative transport layer in the form of a store-and-forward
-service.
+TLS over TCP, we propose using an alternative transport layer in the form of a relay service.
 
-The store-and-forward service is a web service that can be reached from all devices (it may be
-co-located with the mediator). It accepts messages from one device and relays them to another
-device: if the recipient is online, the messages are forwarded immediately, otherwise they are
-stored until the recipient is next online. The messages are records of the TLS Record
-Protocol~\cite{TLS}, so two devices can perform a TLS handshake and establish a secure channel by
-sending each other messages via the store-and-forward service. The service needs to be highly
-available, but it does not need to be trusted for security purposes.
+The relay is a web service that can be reached from all devices (it may be co-located with the
+mediator). It accepts messages from one device and relays them to another device: if the recipient
+is online, the messages are forwarded immediately, otherwise they are stored until the recipient is
+next online. The messages are records of the TLS Record Protocol~\cite{TLS}, so two devices can
+perform a TLS handshake and establish a secure channel by sending each other messages via the relay.
+The service needs to be highly available, but it does not need to be trusted for security purposes.
 
 If devices are only occasionally online, the round-trip-times across this ``network connection'' may
 be measured in days, so timeouts may need to be adjusted accordingly. However, once this channel has
 been set up, it can remain open indefinitely (with occasional renegotiation), even across device
 reboots.
 
-Besides this store-and-forward service, devices should support alternative transport mechanisms,
-such as direct TCP connections on a local network, Bluetooth or NFC. These may only occasionally be
-used, but they are good fallbacks so that the store-and-forward service does not become a single
-point of failure. The same TLS record protocol can be used over those transport layers.
+Besides this relay, devices should support alternative transport mechanisms, such as direct TCP
+connections on a local network, Bluetooth or NFC. These may only occasionally be used, but they are
+good fallbacks so that the relay does not become a single point of failure. The same TLS record
+protocol can be used over those transport layers.
 
 \subsection{Data synchronization}\label{sec:devicesync}
 
@@ -117,13 +115,13 @@ physical device (i.e. pair a new device with their existing devices), they proce
 \item The user installs the Octokey application on the new device, and selects ``set up this device
 to use your existing Octokey''.
 \item The application generates that device's keypair and self-signed certificate. It then registers
-itself at the store-and-forward service, using its device certificate for client authentication. The
-store-and-forward service allocates a URL at which this device can be reached, using the device's
-public key fingerprint as recipient identifier.
+itself at the relay, using its device certificate for client authentication. The relay allocates a
+URL at which this device can be reached, using the device's public key fingerprint as recipient
+identifier.
 \item The application on the device displays a 2D barcode on screen, containing an indicator that
-this is an enrollment request, the store-and-forward URL at which it can be reached, the device's
-public key fingerprint, and optionally information about other transport channels (e.g. Bluetooth)
-where it can be reached. The barcode must not contain any sensitive data, since it may be visible to
+this is an enrollment request, the relay URL at which it can be reached, the device's public key
+fingerprint, and optionally information about other transport channels (e.g. Bluetooth) where it can
+be reached. The barcode must not contain any sensitive data, since it may be visible to
 eavesdroppers (see section~\ref{sec:barcode-intercept}).
 \item The user scans this barcode using the camera of their existing Octokey device. The application
 connects to the URL in the barcode, negotiates an end-to-end TLS connection and checks that the
