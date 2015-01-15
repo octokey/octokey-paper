@@ -59,6 +59,13 @@ deals with much more than just authentication, such as the selective disclosure 
 attributes for privacy reasons. We fear that this complexity will prove an obstacle to its practical
 adoption.
 
+OTTA~\cite{Thomas14} is similar in philosophy to Octokey. It uses a separate keypair per identity
+per device, and a public log (similar to Certificate Transparency~\cite{CertTrans}) for revocation
+and for linking keys belonging to the same user. However, revocation of a lost key is awkward for
+users, because it relies on a revocation certificate that is stored ``somewhere safe'' (offline?).
+We fear that if key revocation is too awkward, users will be too lazy to revoke a lost device, and
+thus risk key theft.
+
 \section{Conclusion}
 
 In this paper, we have introduced the design of Octokey, an authentication system intended for
