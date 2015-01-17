@@ -239,3 +239,35 @@ and rejecting certificates that do not appear in the log. Certificate Transparen
 against attackers who have stolen a website's private key (or governments, which can obtain the
 private key with a court order), but it does prevent more casual kinds of MITM attacks, so it may be
 sufficient.
+
+\subsection{Integrating with existing login flows}\label{sect:html}
+
+The motiviating example behind Octokey is logging into websites. We have designed the protocol so that
+it's easy to integrate it into existing login flows. In our initial implementation we assumed that the
+user has installed a browser-extension that handles Octokey authentication for them.
+
+To indicate that a service supports Octokey login, it uses data attributes to annotate several fields
+in the signup flow:
+
+\begin{enumerate}
+\item \texttt{data-octokey="form"}. Indicates a form that should be processed by Octokey.
+\item \texttt{data-octokey="user"}. The input that will prompt the user to enter their registered name $r$.
+\item \texttt{data-octokey="challenge"}. An input with type hidden that contains a challenge from the server.
+\item \texttt{data-octokey="mandate"}. An input with type hidden that the browser extension fills with the
+mandate before submitting the form.
+\item \texttt{data-octokey="indicator"}. Any DOM element that needs to change behaviour depending on the presence
+of an Octokey compatible browser extension. These elements have the CSS class \texttt{``octokey-enabled"} added
+to them by the browser extension.
+\end{enumerate}
+
+When the browser extension sees these fields on a form that was loaded over a secure connection it can
+prefill the \emph{user} field if the client has visited this site before. Otherwise it will wait for the user to fill
+the \emph{user} field with their desired username or email address. It can then set the value of the \emph{mandate}
+field to $ H(c \concat u \concat r \concat \mathit{ex}) \concat c \concat u \concat r \concat ex \concat n \concat e $,
+using $c$ from the \emph{challenge} input, $r$ from the \emph{user} input, $u$ from the current page's URL.
+
+Using this embedded protocol isn't the only way we can imagine Octokey beind deployed, but it should make it
+trivial to integrate into the login and sign up flows of any website in a minimally intrusive way. The only design
+change that the site needs to consider is to hide the password field when Octokey is used, and the only code change
+is to validate Octokey mandates instead of passwords when they are present.
+
