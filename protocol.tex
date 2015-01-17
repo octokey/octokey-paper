@@ -28,6 +28,28 @@ If a password is used to decrypt the user's private key, they need only remember
 per device, but not a separate password for every service where they have an account. We believe
 that a single password (like in a password manager) is an acceptable user experience.
 
+\subsection{Authentication challenges}\label{sec:challenges}
+
+During both login and signup the service must verify that the user is currently in possession of the
+relevant private key. It does this by issuing a challenge that must be included in an RSA signature.
+The format and contents of the challenge are unspecified -- the client treats it as an opaque byte
+string. However, we suggest that a service constructs a challenge from a timestamp $t$, a nonce $x$,
+and a secret key $K$ that is known only to the service:
+$$c = t \concat x \concat \mathrm{HMAC}(K, t \concat x)$$
+The symbol $\concat$ denotes encoding and concatenating the values into a byte string. When receiving
+a request from the client the service can check that challenge is valid by checking that all of the
+following are true:
+\begin{itemize}
+\item $\mathrm{HMAC}(K, t \concat x)$ is a valid HMAC using the secret key K. This ensures that the
+challenge was issued by this service.
+\item $t$ is a recent timestamp. This is a guard against offline brute-force attacks.
+\item $x$ is a unique nonce that has not been used before. This is a guard against replay attacks.
+\end{itemize}
+
+If a service wants to deviate from this scheme, it must still ensure that clients cannot forge or
+modify challenges without being detected, and that a challenge is valid for only a finite length
+of time.
+
 \subsection{Authentication mandates}\label{sec:mandates}
 
 Each user has a RSA keypair $(n, d, e)$ where $n$ is the modulus, $d$ is the private exponent and
@@ -42,12 +64,7 @@ record. The service may have multiple public keys on record for a user, and shou
 those keys to authenticate as the user.
 
 To log in, the user's client first requests a challenge $c$ from the service via a HTTP
-endpoint.\footnote{The format and contents of the challenge are unspecified -- the client treats it
-as an opaque byte string. However, we suggest that a service constructs a challenge from a
-timestamp $t$, a nonce $x$ and a secret key $K$ that is known only to the service:
-$c = t \concat x \concat \mathrm{HMAC}(K, t \concat x)$. The HMAC can be used to check that the
-challenge was issued by this service, $t$ can be used to verify freshness, and $x$ prevents reuse of
-a challenge.} It then calculates $m = H(c \concat u \concat r)$ where $u$ is the URL of the service endpoint and
+endpoint. It then calculates $m = H(c \concat u \concat r)$ where $u$ is the URL of the service endpoint and
 $r$ is the user's registered username. $H$ is shorthand for the \textsc{EMSA-PSS-Encode} operation
 (hashing and padding) as defined in PKCS\#1.~\cite{PKCS1} The RSA signature can then be calculated
 as $s = m^d \mod n$.
