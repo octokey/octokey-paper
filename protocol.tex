@@ -101,9 +101,10 @@ generate a mandate, it can send a signing request $\mathit{req}$ to device $b$:
 $$\mathit{req} = H(c \concat u \concat r \concat \mathit{ex}) \concat n \concat e$$
 where the public key $(n, e)$ indicates which key should be used, in case device $b$ stores multiple
 keys. Device $b$ then uses its key fragment $d_b$ to calculate a response:
-$$\mathit{resp} = H(c \concat u \concat r \concat \mathit{ex})^{d_b} = m^{d_b}$$
-and returns $\mathit{resp}$ to $a$. Now, $a$ can calculate $s = m^{d_a} m^{d_b}$ by using its own
-key fragment $d_a$ and $\mathit{resp}$, construct a mandate with a valid signature, and thus log in.
+$$\mathit{resp} = H(c \concat u \concat r \concat \mathit{ex})^{d_b} = m^{d_b} \mod n$$
+and returns $\mathit{resp}$ to $a$. Now, $a$ can calculate
+$$s = H(c \concat u \concat r \concat \mathit{ex})^{d_a} \cdot \mathit{resp} = m^{d_a} m^{d_b} \mod n,$$
+construct a mandate with a valid signature, and thus log in.
 
 If a device is lost, stolen or compromised, this scheme allows the user to revoke that device's
 login capability: every device that is paired with the lost device must be instructed to delete the
@@ -179,7 +180,7 @@ We modify the mediator's request processing as follows:
 signature $s_\mathit{req}$:
 \begin{align*}
     \mathit{req} &= H(c \concat u \concat r \concat \mathit{ex}) \concat n \concat e \\
-    s_\mathit{req} &= H(\mathit{req} \concat \mathit{cb})^{d_a^\prime}
+    s_\mathit{req} &= H(\mathit{req} \concat \mathit{cb})^{d_a^\prime} \mod n
 \end{align*}
 where $\mathit{cb}$ is the \texttt{tls-unique} channel binding~\cite{ChannelBinding}
 of the TLS connection between the client and the mediator. Channel binding is further discussed in
@@ -190,16 +191,16 @@ section~\ref{sec:channels}), it can retrieve the key fragment for the authentica
 \item Using the channel binding $\mathit{cb}^\prime$ of the TLS connection's server side, the
 mediator computes
 $$s_\mathit{req} H(\mathit{req} \concat \mathit{cb}^\prime)^{d_b} =
-  H(\mathit{req} \concat \mathit{cb})^{d_a^\prime} H(\mathit{req} \concat \mathit{cb}^\prime)^{d_b}$$
+  H(\mathit{req} \concat \mathit{cb})^{d_a^\prime} H(\mathit{req} \concat \mathit{cb}^\prime)^{d_b} \mod n$$
 and checks whether the result is a valid PKCS\#1 signature of
 $\mathit{req} \concat \mathit{cb}^\prime$ for the user's public key $(n, e)$. This check succeeds if
 $d_a^\prime = d_a$ (i.e. the user's password was correct), and if $\mathit{cb}^\prime = \mathit{cb}$
 (preventing MITM and replay attacks).
 \item If the signature is valid, the mediator computes
-$\mathit{resp} = H(c \concat u \concat r \concat \mathit{ex})^{d_b}$ as before, and returns it to
-the client. If the signature is not valid, the mediator returns ``bad signature''. A
-password-guessing attacker learns that the password guess $\mathit{pass}^\prime$ was incorrect, but
-otherwise nothing is revealed that would help them guess the password.
+$$\mathit{resp} = H(c \concat u \concat r \concat \mathit{ex})^{d_b} \mod n$$
+as before, and returns it to the client. If the signature is not valid, the mediator returns ``bad
+signature''. A password-guessing attacker learns that the password guess $\mathit{pass}^\prime$ was
+incorrect, but otherwise nothing is revealed that would help them guess the password.
 \end{enumerate}
 
 Note that although the mediator computes an RSA signature using the user's private key, the value
@@ -207,10 +208,10 @@ being signed ($\mathit{req} \concat \mathit{cb}$) cannot be used to construct a 
 mediator cannot log in to services on the user's behalf.
 
 This protection against password guessing only works if the attacker does not have any knowledge of
-previous requests to the mediator. If the attacker knows $x^{d_a}$ (a request) or $x^{d_b}$ (a
-response) for any $x$, they can brute-force the password without contacting the mediator, and thus
-circumvent the rate-limiting.  It is therefore important that communication with the mediator is
-protected from eavesdropping (using TLS) and is not logged on the device.
+previous requests to the mediator. If the attacker knows $x^{d_a} \mod n$ (a request) or
+$x^{d_b} \mod n$ (a response) for any $x$, they can brute-force the password without contacting the
+mediator, and thus circumvent the rate-limiting.  It is therefore important that communication with
+the mediator is protected from eavesdropping (using TLS) and is not logged on the device.
 
 \subsection{Channel binding and preventing MITM}\label{sec:channelbinding}
 
