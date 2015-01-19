@@ -56,11 +56,10 @@ have multiple public keys on record for a user, and should allow any one of thos
 as the user.
 
 To log in or sign up, the user's client first requests a challenge $c$ from the service via a HTTP
-endpoint. It then calculates $m = H(c \concat u \concat r \concat \mathit{ex})$ where $u$ is the
-URL of the service endpoint $r$ is the user's registered username, and $\mathit{ex}$ is the expiry
-of their key. $H$ is shorthand for the \textsc{EMSA-PSS-Encode} operation
-(hashing and padding) as defined in PKCS\#1.~\cite{PKCS1} The RSA signature can then be calculated
-as $s = m^d \mod n$.
+endpoint. It then calculates $m = H(c \concat u \concat r \concat \mathit{ex})$ where $u$ is the URL
+of the service endpoint, $r$ is the user's registered username, and $\mathit{ex}$ is the expiry date
+of the key. $H$ is shorthand for the \textsc{EMSA-PSS-Encode} operation (hashing and padding) as
+defined in PKCS\#1.~\cite{PKCS1} The RSA signature can then be calculated as $s = m^d \mod n$.
 
 The client then constructs the \emph{mandate}, which is an encoding of the RSA-signed message and
 the user's public key: $$\mathit{mandate} = s \concat c \concat u \concat r \concat \mathit{ex} \concat n \concat e.$$
@@ -70,18 +69,18 @@ application layer. The server can verify the mandate by checking that all of the
 \item $s$ is a valid PKCS\#1 signature of the message $c \concat u \concat r \concat \mathit{ex}$,
 checked against the public key $(n, e)$.
 \item $c$ is a valid challenge, as defined in section~\ref{sec:challenges}.
-\item $u$ is a valid URL for this service. A login request for an unknown URL must be rejected.
-This prevents phishing-like attacks, whereby an attacker creates an imitation website under a
+\item $u$ is a valid URL for this service. A mandate for an unknown URL must be rejected. This
+prevents phishing-like attacks, whereby an attacker creates an imitation website under a
 similar-looking URL and tricks the user into logging in.
-\item $r$ is a registered username for this service, and $(n, e, \mathit{ex})$ is a public key for
-that user.
+\item For a signup request, the username $r$ is not yet taken. For a login request, $r$ is a
+registered username for this service, and $(n, e, \mathit{ex})$ is a public key for that user.
 \item $\mathit{ex}$ is in the future.
 \end{itemize}
 
-If a login mandate is successfully verified, the user is logged in by the server in the usual manner,
-for example by setting an appropriate session cookie. If a signup mandate is succesfully verified then
-the sign up flow continues as usual, with the server asking for the user's name, and verifying their
-email address as required.
+If a login mandate is successfully verified, the user is logged in by the server in the usual
+manner, for example by setting an appropriate session cookie. If a signup mandate is successfully
+verified, the signup flow continues as usual, e.g. asking for the user's name and verifying their
+email address.
 
 \subsection{Protection against key theft}\label{sec:revocation}
 
