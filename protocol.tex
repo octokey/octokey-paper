@@ -132,9 +132,9 @@ automatically behind the scenes.
 The mediator need only be partially trusted. It cannot authenticate as the user without the
 cooperation of one of the user's physical devices. The user only needs to trust the mediator to not
 collude with attackers who steal devices, and to correctly delete key fragments when the user
-requires key revocation. The user's privacy is protected by hashing the message $c \concat u \concat r$
-before sending it to the mediator, so it does not learn which services the user is logging in to,
-or which usernames they are using.
+requires key revocation. The user's privacy is protected by hashing the message
+$c \concat u \concat r \concat \mathit{ex}$ before sending it to the mediator, so it does not learn
+which services the user is logging in to, or which usernames they are using.
 
 From the point of view of a service that accepts Octokey login, the mediator does not even exist: a
 service simply verifies the RSA signature on a mandate, and does not care how that signature was
@@ -196,10 +196,10 @@ $\mathit{req} \concat \mathit{cb}^\prime$ for the user's public key $(n, e)$. Th
 $d_a^\prime = d_a$ (i.e. the user's password was correct), and if $\mathit{cb}^\prime = \mathit{cb}$
 (preventing MITM and replay attacks).
 \item If the signature is valid, the mediator computes
-$\mathit{resp} = H(c \concat u \concat r)^{d_b}$ as before, and returns it to the client. If the
-signature is not valid, the mediator returns ``bad signature''. A password-guessing attacker learns
-that the password guess $\mathit{pass}^\prime$ was incorrect, but otherwise nothing is revealed that
-would help them guess the password.
+$\mathit{resp} = H(c \concat u \concat r \concat \mathit{ex})^{d_b}$ as before, and returns it to
+the client. If the signature is not valid, the mediator returns ``bad signature''. A
+password-guessing attacker learns that the password guess $\mathit{pass}^\prime$ was incorrect, but
+otherwise nothing is revealed that would help them guess the password.
 \end{enumerate}
 
 Note that although the mediator computes an RSA signature using the user's private key, the value
