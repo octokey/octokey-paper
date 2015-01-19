@@ -28,27 +28,23 @@ If a password is used to decrypt the user's private key, they need only remember
 per device, but not a separate password for every service where they have an account. We believe
 that a single password (like in a password manager) is an acceptable user experience.
 
-\subsection{Authentication challenges}\label{sec:challenges}
+\subsection{Challenges}\label{sec:challenges}
 
-During both login and signup the service must verify that the user is currently in possession of the
-relevant private key. It does this by issuing a challenge that must be included in an RSA signature.
-The format and contents of the challenge are unspecified -- the client treats it as an opaque byte
-string. However, we suggest that a service constructs a challenge from a timestamp $t$, a nonce $x$,
-and a secret key $K$ that is known only to the service:
+A service that accepts Octokey login must generate challenges, which are then signed by clients (see
+section~\ref{sec:mandates}). The client does not interpret challenges, but treats them as opaque
+byte strings. We propose that a service constructs a challenge from a wall-clock timestamp $t$, a
+nonce $x$, and a secret key $K$ that is known only to the service:
 $$c = t \concat x \concat \mathrm{HMAC}(K, t \concat x)$$
-The symbol $\concat$ denotes encoding and concatenating the values into a byte string. When receiving
-a request from the client the service can check that challenge is valid by checking that all of the
-following are true:
+The symbol $\concat$ denotes encoding and concatenating the values into a byte string. When a client
+submits a signed challenge to the service, the service can verify its validity by checking that all
+of the following are true:
 \begin{itemize}
 \item $\mathrm{HMAC}(K, t \concat x)$ is a valid HMAC using the secret key K. This ensures that the
 challenge was issued by this service.
-\item $t$ is a recent timestamp. This is a guard against offline brute-force attacks.
-\item $x$ is a unique nonce that has not been used before. This is a guard against replay attacks.
+\item $t$ is a recent timestamp (e.g. no more than 5 minutes old). This is a guard against offline
+brute-force attacks.
+\item $x$ has not been used within the time interval $t$. This prevents replay attacks.
 \end{itemize}
-
-If a service wants to deviate from this scheme, it must still ensure that clients cannot forge or
-modify challenges without being detected, and that a challenge is valid for only a finite length
-of time.
 
 \subsection{Authentication mandates}\label{sec:mandates}
 
@@ -76,8 +72,7 @@ application layer. The server can verify the mandate by checking that all of the
 \begin{itemize}
 \item $s$ is a valid PKCS\#1 signature of the message $c \concat u \concat r$, checked against the
 public key $(n, e)$.
-\item $c$ is a valid challenge issued by this service, has not been used for login before, and is
-not older than some maximum age. This prevents replay attacks.
+\item $c$ is a valid challenge, as defined in section~\ref{sec:challenges}.
 \item $u$ is a valid URL for this service. A login request for an unknown URL must be rejected.
 This prevents phishing-like attacks, whereby an attacker creates an imitation website under a
 similar-looking URL and tricks the user into logging in.
