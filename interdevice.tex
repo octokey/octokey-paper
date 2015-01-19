@@ -32,7 +32,8 @@ This approach does not require any PKI or certificate authorities: public key fi
 exchanged out-of-band when devices are first discovered (see section~\ref{sec:newdevice}), so each
 device can check whether its peer is the device that it claims to be. It is not important which
 device acts as client or server in this channel, as the relationship between the devices is
-symmetric.
+symmetric. To prevent triple handshake attacks~\cite{Bhargavan14}, renegotiation and resumption
+should be disabled.
 
 However, there is a practical problem: it can be difficult to establish a peer-to-peer TCP
 connection between two arbitrary devices, as they may be on different networks, behind firewalls,
