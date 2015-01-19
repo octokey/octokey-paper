@@ -50,10 +50,9 @@ brute-force attacks.
 
 Each user has a RSA keypair $(n, d, e)$ where $n$ is the modulus, $d$ is the private exponent and
 $e$ is the public exponent. A key also has an expiry date $\mathit{ex}$, which is chosen when the
-key is generated, and which is signed with the private key using a PKCS\#1 signature. The expiry is
-used to rotate the user's keypair periodically (see section~\ref{sec:rotation}). The service may
-have multiple public keys on record for a user, and should allow any one of those keys to authenticate
-as the user.
+key is generated, and which is used to rotate the user's keypair periodically (see
+section~\ref{sec:rotation}). The service may have multiple public keys on record for a user, and
+should allow any one of those keys to authenticate as the user.
 
 To log in or sign up, the user's client first requests a challenge $c$ from the service via a HTTP
 endpoint. It then calculates $m = H(c \concat u \concat r \concat \mathit{ex})$ where $u$ is the URL
