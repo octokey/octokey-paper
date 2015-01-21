@@ -32,29 +32,21 @@ This approach does not require any PKI or certificate authorities: public key fi
 exchanged out-of-band when devices are first discovered (see section~\ref{sec:newdevice}), so each
 device can check whether its peer is the device that it claims to be. It is not important which
 device acts as client or server in this channel, as the relationship between the devices is
-symmetric.
+symmetric. To prevent triple handshake attacks~\cite{Bhargavan14}, renegotiation and resumption
+should be disabled.
 
 However, there is a practical problem: it can be difficult to establish a peer-to-peer TCP
-connection between two arbitrary devices, as they may be on different networks, behind firewalls,
-and they may often be offline -- and rarely online at the same time. Thus, in addition to performing
-TLS over TCP, we propose using an alternative transport layer in the form of a relay service.
+connection between two arbitrary devices, as they may be on different networks, behind firewalls and
+NAT routers. Bluetooth, NFC or other wireless media may also be used, depending on the hardware
+features of the user's devices. If a direct connection cannot be established, we propose falling
+back to an alternative transport layer in the form of a relay service.
 
 The relay is a web service that can be reached from all devices (it may be co-located with the
-mediator). It accepts messages from one device and relays them to another device: if the recipient
-is online, the messages are forwarded immediately, otherwise they are stored until the recipient is
-next online. The messages are records of the TLS Record Protocol~\cite{TLS}, so two devices can
-perform a TLS handshake and establish a secure channel by sending each other messages via the relay.
-The service needs to be highly available, but it does not need to be trusted for security purposes.
-
-If devices are only occasionally online, the round-trip-times across this ``network connection'' may
-be measured in days, so timeouts may need to be adjusted accordingly. However, once this channel has
-been set up, it can remain open indefinitely (with occasional renegotiation), even across device
-reboots.
-
-Besides this relay, devices should support alternative transport mechanisms, such as direct TCP
-connections on a local network, Bluetooth or NFC. These may only occasionally be used, but they are
-good fallbacks so that the relay does not become a single point of failure. The same TLS record
-protocol can be used over those transport layers.
+mediator). It accepts messages from one device and relays them to another device if the recipient is
+online. If the recipient is not online, the messages are rejected. The messages are records of the
+TLS Record Protocol~\cite{TLS}, so two devices can perform a TLS handshake and establish a secure
+channel by sending each other messages via the relay. The service needs to be highly available, but
+it does not need to be trusted for security purposes.
 
 \subsection{Data synchronization}\label{sec:devicesync}
 
@@ -62,19 +54,16 @@ These point-to-point channels are used for exchanging mRSA signing requests and 
 devices. Moreover, we can use them for replicating information that we want stored on all devices:
 each of the user's devices maintains a local database containing public key fingerprints of all of
 the user's other devices (for mutual authentication of channels), configuration (e.g. URL of the
-mediator), and information on which devices are paired (for key revocation purposes). In addition,
-the user's physical devices maintain a database of usernames on all the user's services (for
-username autofill), although this should not be replicated to the mediator, to protect the user's
-privacy.
+mediator), and information on which devices are paired (for key revocation purposes).
 
-Each of the user's devices needs to be able to read and modify this database, and any changes should
-be asynchronously propagated to the other devices. To this end, we can use the point-to-point
-channels of section~\ref{sec:channels} to create a mesh of connections among the user's devices
-(even between those which are not paired). It is not necessary to have a communication channel
-between every pair of devices, because devices can forward incoming database changes to others.
-However, a fairly densely connected graph of channels is desirable, so that any message from one
-device reaches the other devices fairly quickly, and so that the communication is resilient to
-device and channel failures.
+Each of the user's devices (including the mediator) needs to be able to read and modify this
+database, and any changes should be asynchronously propagated to the other devices. To this end, we
+can use the point-to-point channels of section~\ref{sec:channels} to create a mesh of connections
+among the user's devices (even between those which are not paired). It is not necessary to have a
+communication channel between every pair of devices, because devices can forward incoming database
+changes to others. However, a fairly densely connected graph of channels is desirable, so that any
+message from one device reaches the other devices fairly quickly, and so that the communication is
+resilient to device and channel failures.
 
 Within this mesh network, we can use a \emph{gossip protocol} (also known as \emph{epidemic
 protocol}) \cite{Demers89} for disseminating database changes. \emph{Version vectors}
@@ -83,6 +72,15 @@ and \emph{CRDTs}~\cite{Shapiro11} can automatically resolve any conflicts betwee
 database updates, without requiring user interaction. Every database change must be signed with the
 device key of the device on which it originated, so that any changes made on a revoked device can be
 rejected, and so that one device cannot make changes on another device's behalf.
+
+As a convenience, the Octokey applications may also maintain a database of the user's username on
+each of their services, so that it can be auto-filled in login forms. This needs to be synchronized
+to all physical devices, but it should not be exposed to the mediator, to protect the user's
+privacy. However, physical devices may be rarely simultaneously online, so synchronizing this
+database only using connections between physical devices (whether direct or via the relay) is not
+sufficient. We propose that these database changes are encrypted with the public device keys of the
+user's physical devices and then sent to the mediator, which can forward them to the other devices
+but not decrypt them.
 
 \subsection{Bootstrapping}\label{sec:bootstrap}
 
