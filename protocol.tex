@@ -224,25 +224,18 @@ function such as Scrypt~\cite{Percival09}. The parameters of the key derivation 
 parameter, pseudorandom function used, etc.) are stored in cleartext. We then generate a key stream
 using a symmetric block cipher such as AES-128 in CTR mode.~\cite{Lipmaa00}
 
-Say the key fragment we want to encrypt is $d_a$, and let $k$ be the minimum number of bits required
-to encode $d_a$ (i.e. $2^{k-1} \le d_a < 2^k$). We can now encrypt this value by taking the first
-$k$ bits of the AES-CTR key stream and XORing them with the $d_a$ bit string:
+Say the key fragment we want to encrypt is $d_a$, to encode $d_a$ we represent it as an $k$-bit
+number, where $k$ is the RSA key-length, using leading zeroes where necessary.  We can now encrypt this
+value by taking the first $k$ bits of the AES-CTR key stream and XORing them with the $d_a$ bit string:
 $$\mathit{efrag} = \mathit{ctr} \concat
-    (\mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}))_{\{0 \dots k-1\}} \oplus d_a)$$
+    (\mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}))_{\{0 \dots k\}} \oplus d_a)$$
 where $\mathit{ctr}$ is a 128-bit random nonce that is incremented by AESCTR for each subsequent
 block of key stream. The encrypted value is a pseudorandom number uniformly distributed between 0
 and $2^k$.
 
-However, this construction leaks some information: since the length of the encrypted bit string is
-$k$, an attacker can determine that $d_a$ must be between $2^{k-1}$ and $2^k$, and since the most
-significant bit of $d_a$ must be 1, a password-guessing attacker can reject half of the incorrect
-password guesses (those with a 0 bit) without contacting the mediator.
-
-To strengthen this, we can make the bit string $k^\prime = k + \alpha$ bits long, where $\alpha$ is
-chosen randomly such that $$p(\alpha = i) = 2^{-i-1} \quad (i \ge 0).$$ When $d_a$ is encoded into
-$k^\prime$ bits, the topmost $\alpha$ bits are zero. Thus, an attacker cannot rule out password
-guesses from examining the top bits of a decryption attempt, and the scheme only leaks the
-information that $d_a < 2^{k^\prime}$.
+Any attempt to decrypt this will result in a pseudo-random number between 0 and $2^k$. This is
+indistinguishable from a private key fragment, which is a random number between 0 and $d$, providing
+that the magnitude of $d$ is unknown.
 
 \subsection{Channel binding and preventing MITM}\label{sec:channelbinding}
 
