@@ -224,18 +224,27 @@ function such as Scrypt~\cite{Percival09}. The parameters of the key derivation 
 parameter, pseudorandom function used, etc.) are stored in cleartext. We then generate a key stream
 using a symmetric block cipher such as AES-128 in CTR mode.~\cite{Lipmaa00}
 
-Say the key fragment we want to encrypt is $d_a$, to encode $d_a$ we represent it as an $k$-bit
-number, where $k$ is the RSA key-length, using leading zeroes where necessary.  We can now encrypt this
-value by taking the first $k$ bits of the AES-CTR key stream and XORing them with the $d_a$ bit string:
+Let $k$ be the minimum number of bits required to encode the RSA modulus $n$ (i.e. the RSA key
+length). To encrypt the key fragment $d_a$, we first encode it as a $k$-bit string, using zeros for
+the most significant bits if necessary. We then take the first $k$ bits of the AES-CTR key stream
+and XOR them with the $d_a$ bit string:
 $$\mathit{efrag} = \mathit{ctr} \concat
-    (\mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}))_{\{0 \dots k\}} \oplus d_a)$$
+    (\mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}))_{\{0 \dots k-1\}} \oplus d_a)$$
 where $\mathit{ctr}$ is a 128-bit random nonce that is incremented by AESCTR for each subsequent
-block of key stream. The encrypted value is a pseudorandom number uniformly distributed between 0
-and $2^k$.
+block of key stream.
 
-Any attempt to decrypt this will result in a pseudo-random number between 0 and $2^k$. This is
-indistinguishable from a private key fragment, which is a random number between 0 and $d$, providing
-that the magnitude of $d$ is unknown.
+Any attempt to decrypt the key fragment results in a uniformly distributed pseudo-random number
+between 0 and $2^k$, whereas the correct key fragment is uniformly distributed between 0 and $d$.
+Since $d < 2^k$, a password guess that results in a larger decrypted value is less likely to be
+correct than a password guess that results in a smaller decrypted value. A password-guessing
+attacker can use this knowledge to prioritize guesses, but they cannot entirely rule out guesses
+without contacting the mediator.
+
+To quantify the bias, we repeatedly generated 2048-bit RSA keys using OpenSSL. Approximately 90\% of
+private exponents were in the range $0.05 < 2^{-k} d < 0.8$, with a fairly uniform distribution
+within that range. When key fragments $d_a$ (chosen uniformly from $[0, d]$) were encoded in $k$
+bits, they had on average 2.8 high-order zero bits, and the top bit was zero in 94\% of key
+fragments.
 
 \subsection{Channel binding and preventing MITM}\label{sec:channelbinding}
 
@@ -275,5 +284,3 @@ and rejecting certificates that do not appear in the log. Certificate Transparen
 against attackers who have stolen a website's private key (or governments, which can obtain the
 private key with a court order), but it does prevent more casual kinds of MITM attacks, so it may be
 sufficient.
-
-\pagebreak
