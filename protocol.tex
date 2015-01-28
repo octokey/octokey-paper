@@ -153,9 +153,8 @@ for example an encryption key that is derived from biometric measurements.} Cons
 has stolen this encrypted fragment. In order to brute-force the password, the attacker needs a way
 of determining whether a password guess is correct. However, a key fragment is just a uniformly
 distributed random number; by itself, the correctly decrypted key fragment is indistinguishable from
-the garbage that results from trying to decrypt with the wrong password.\footnote{If the encryption
-uses a block cipher, the key fragment must be padded with random bits up to the block size. Padding
-with a predictable bit pattern would leak information on whether a password guess was correct.}
+the garbage that results from trying to decrypt with the wrong password (see
+section~\ref{sec:fragmentenc}).
 
 Assuming the attacker has no other key fragments, they can only determine whether the password guess
 was correct by communicating with the mediator and testing whether they are able to construct a
@@ -212,6 +211,40 @@ previous requests to the mediator. If the attacker knows $x^{d_a} \mod n$ (a req
 $x^{d_b} \mod n$ (a response) for any $x$, they can brute-force the password without contacting the
 mediator, and thus circumvent the rate-limiting.  It is therefore important that communication with
 the mediator is protected from eavesdropping (using TLS) and is not logged on the device.
+
+\subsection{Key fragment encryption}\label{sec:fragmentenc}
+
+The method described in section~\ref{sec:ratelimit} for rate-limiting password guesses depends on a
+correctly decrypted key fragment being indistinguishable from an incorrect password guess without
+contacting the mediator. In this section we propose an encryption scheme which satisfies that
+requirement.
+
+We first derive an encryption key from the password using a slow, memory-hard key derivation
+function such as Scrypt~\cite{Percival09}. The parameters of the key derivation function (salt, cost
+parameter, pseudorandom function used, etc.) are stored in cleartext. We then generate a key stream
+using a symmetric block cipher such as AES-128 in CTR mode.~\cite{Lipmaa00}
+
+Let $k$ be the minimum number of bits required to encode the RSA modulus $n$ (i.e. the RSA key
+length). To encrypt the key fragment $d_a$, we first encode it as a $k$-bit string, using zeros for
+the most significant bits if necessary. We then take the first $k$ bits of the AES-CTR key stream
+and XOR them with the $d_a$ bit string:
+$$\mathit{efrag} = \mathit{ctr} \concat
+    (\mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}))_{\{0 \dots k-1\}} \oplus d_a)$$
+where $\mathit{ctr}$ is a 128-bit random nonce that is incremented by AESCTR for each subsequent
+block of key stream.
+
+Any attempt to decrypt the key fragment results in a uniformly distributed pseudo-random number
+between 0 and $2^k$, whereas the correct key fragment is uniformly distributed between 0 and $d$.
+Since $d < 2^k$, a password guess that results in a larger decrypted value is less likely to be
+correct than a password guess that results in a smaller decrypted value. A password-guessing
+attacker can use this knowledge to prioritize guesses, but they cannot entirely rule out guesses
+without contacting the mediator.
+
+To quantify the bias, we repeatedly generated 2048-bit RSA keys using OpenSSL. Approximately 90\% of
+private exponents were in the range $0.05 < 2^{-k} d < 0.8$, with a fairly uniform distribution
+within that range. When key fragments $d_a$ (chosen uniformly from $[0, d]$) were encoded in $k$
+bits, they had on average 2.8 high-order zero bits, and the top bit was zero in 94\% of key
+fragments.
 
 \subsection{Channel binding and preventing MITM}\label{sec:channelbinding}
 
