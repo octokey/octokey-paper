@@ -1,4 +1,5 @@
-\documentclass{acm_proc_article-sp}
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage{usenix,epsfig}
 \usepackage{cite}
 \usepackage{hyperref}
 \usepackage{amsmath}
@@ -7,15 +8,13 @@
 \sloppy
 
 \begin{document}
-\toappear{This is an unpublished draft. Please don't distribute without our permission.}
-\title{Octokey: Public key authentication for the web}
-\numberofauthors{2}
-\author{
-    \alignauthor Martin Kleppmann \\ \email{martin@kleppmann.com}
-    \alignauthor Conrad Irwin \\ \email{conrad.irwin@gmail.com}}
+\date{} % No date
+\title{\Large \bf Octokey: Public key authentication for the web}
+\author{{\rm Martin Kleppmann} \and {\rm Conrad Irwin}}
 \maketitle
 
-\begin{abstract}
+\subsection*{Abstract}
+
 We propose Octokey, a cryptographic protocol for authenticating users, designed as a viable
 replacement for password authentication in consumer internet use cases. When a user signs up to a
 service, they provide a public key. Clients subsequently authenticate by presenting a challenge
@@ -40,6 +39,9 @@ solicit constructive feedback from all sides.}
 \input{threat}
 \input{others}
 
-\bibliography{references}{}
-\bibliographystyle{plain}
+{\footnotesize
+    \bibliographystyle{plain}
+    \bibliography{references}{}
+}
+
 \end{document}
