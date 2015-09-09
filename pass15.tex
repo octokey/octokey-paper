@@ -191,10 +191,10 @@ results in a larger decrypted value is less likely to be correct than a password
 in a smaller decrypted value. A password-guessing attacker can use this knowledge to prioritize
 guesses.
 
-To quantify the bias, we generated 10,000 RSA keys ($k=2048$ bits) using OpenSSL, and generated a
+To quantify the bias, we generated 50,000 RSA keys ($k=2048$ bits) using OpenSSL, and generated a
 random $d_a$ with $0 \le d_a < d$ for each private exponent $d$. Table~\ref{tab:bias} shows the bias
 in the most significant bits of $d_a$ when encoded in $k$ bits. The key fragments had an entropy of
-more than 2047 bits, implying that less than one bit of information is leaked by the bias.
+2047.05 bits, implying that 0.95 bits of information is leaked by the bias.
 
 \renewcommand{\arraystretch}{1.5}
 \setlength\tabcolsep{4pt}
@@ -204,7 +204,7 @@ more than 2047 bits, implying that less than one bit of information is leaked by
 \begin{tabular}{r|rrrrrrrrr}
 $i$ & 2047 & 2046 & 2045 & 2044 & 2043 & 2042 & 2041 & 2040 & 2039 \\ \hline
 Probability &
-0.069 & 0.228 & 0.334 & 0.411 & 0.442 & 0.475 & 0.487 & 0.489 & 0.494
+0.070 & 0.240 & 0.340 & 0.406 & 0.446 & 0.469 & 0.482 & 0.493 & 0.499
 \end{tabular}
 \end{table}
 
