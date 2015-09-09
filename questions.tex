@@ -1,0 +1,49 @@
+\section{Questions for Authentication Systems}
+
+\subsection{Preventing Offline Attacks}\label{sec:offline}
+
+A device storing the private key may fall into the hands of an attacker, or may be remotely
+compromised. Thus, the device must protect the private key with a human-to-machine authentication
+step (e.g.\ password, PIN number, biometrics) that checks whether the person trying to access the
+private key is indeed the owner of the device.
+
+A common approach, for example in password managers, is to encrypt sensitive material with a
+symmetric key that is derived from a master password using a slow key derivation function (KDF) such
+as PBKDF2, bcrypt or scrypt. The goal is that this makes a brute-force offline attack so
+computationally expensive as to be unfeasible. However, we believe that merely using a slow KDF is
+not sufficient to stop a determined attacker who can command significant computing resources.
+
+In Octokey, we use a zero-knowledge approach: an attacker cannot determine whether a password guess
+is correct without making a request to a server, and a separate request is required for every guess.
+This gives the server the opportunity to rate-limit requests.
+
+Alternatively, cryptographic hardware (e.g.\ smart cards) can be set up to allow only a small number
+of guesses, and lock or even destroy itself after some number of failed attempts. This is secure,
+under the assumption that the key cannot be extracted from the hardware using other techniques.
+
+With any technique that limits the number of password guesses there is a risk of denial of service
+(e.g.\ a child playing with the locked device could unwittingly exhaust the password attempts and
+cause self-destruction). For this reason, self-destruction is undesirable in many use cases, and a
+rate limit on password guesses is preferable.
+
+\subsection{Authorization of Revocation}\label{sec:auth-revocation}
+
+If the device storing the private key is lost or stolen, the user needs a mechanism for revoking it
+(the key can be protected against offline attacks, see section~\ref{sec:offline}, but nevertheless
+an attacker may be able to break the human-to-machine authentication, given sufficient time). This
+raises the question: how can the system ensure that only the legitimate owner of the key may revoke
+it (to prevent denial of service), in the absence of a key identifying the user (since it has been
+lost)? Various approaches have been proposed:
+
+\begin{itemize}
+\item If the user's identity was originally established out-of-band by a CA, e.g.\ by checking a
+passport, then the same process can be used to confirm that the revocation request is genuine, and
+the CA can add the user's certificate to a revocation list (CRL).
+\item The protocol may support revocation through a separate revocation key, perhaps stored offline
+on paper. However, this key would also be prone to loss as it is only rarely needed.
+\item A user may register multiple authenticator devices with each service. 
+\end{itemize}
+
+\subsection{Backup of Private Key Material}\label{sec:backup}
+
+see section~\ref{sec:theftloss}
