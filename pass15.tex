@@ -40,20 +40,20 @@ $(n, d)$, where $n$ is the same modulus as in the public key, and $d$ is the pri
 
 For example, a user may log in to a service by constructing an RSA signature $s$:
 \begin{equation}
-s = m^d = H(c \concat r)^d \mod n
+s = m^d = H(c \concat u \concat r)^d \mod n
 \end{equation}
 where $c$ is a challenge or session ID obtained from the service,\footnote{When TLS is used, a
 channel binding~\cite{ChannelBinding} or Origin-Bound Certificate~\cite{Dietz12} may be incorporated
-into the challenge $c$.} $r$ is the username, and $(d, n)$ is the private key. The symbol $\concat$
-denotes encoding and concatenating the values into a byte string. $H$ is shorthand for the
-\textsc{EMSA-PSS-Encode} operation (hashing and padding) defined in PKCS\#1~\cite{PKCS1}.
+into the challenge $c$.} $u$ is the URL of the service, $r$ is the username, and $(d, n)$ is the
+private key. The symbol $\concat$ denotes encoding and concatenating the values into a byte string.
+$H$ is shorthand for the \textsc{EMSA-PSS-Encode} operation (hashing and padding) defined in
+PKCS\#1~\cite{PKCS1}.
 
-The client then sends the authentication request $(s, c, r, n, e)$ to the service, where it is
-validated by checking that $s$ is a valid PKCS\#1 signature of $c \concat r$ using the public key
-$(n, e)$, that $c$ is valid for this service, and that $(n, e)$ is an acceptable public key for user
-$r$. Variations of this pattern are used in SSH~\cite{SSH}, TLS client certificates~\cite{TLS}, and
-FIDO U2F~\cite{FIDOOverview}. The techniques we describe in this paper can be adapted to operate
-within any of these protocols.
+The client then sends the authentication request $(s, c, u, r, n, e)$ to the service, where it is
+validated by checking that $s$ is a valid PKCS\#1 signature of $c \concat u \concat r$ using the
+public key $(n, e)$, that $c$ and $u$ are valid for this service, and that $(n, e)$ is an acceptable
+public key for user $r$. Variations of this pattern are used in SSH~\cite{SSH}, TLS client
+certificates~\cite{TLS}, and FIDO U2F~\cite{FIDOOverview}.
 
 \subsection{Human-to-Machine Authentication}\label{sec:human-to-machine}
 
@@ -77,7 +77,7 @@ Instead, we split it into key fragments that are distributed among several devic
 
 \subsection{Key Splitting}\label{sec:splitting}
 
-mRSA is based on the identity
+mRSA is based on the identity:
 \begin{equation}
 s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n
 \end{equation}
@@ -89,16 +89,16 @@ signature, any two paired devices need to collaborate.
 
 If device $a$ wants to generate a signature, it can send a signing request $\mathit{req}$ to device $b$:
 \begin{equation}
-\mathit{req} = H(c \concat r) \concat n \concat e
+\mathit{req} = H(c \concat u \concat r) \concat n \concat e
 \end{equation}
 where the public key $(n, e)$ indicates which key should be used, in case device $b$ stores multiple
 keys. Device $b$ then uses its key fragment $d_b$ to calculate a response:
 \begin{equation}
-\mathit{resp} = H(c \concat r)^{d_b} = m^{d_b} \mod n
+\mathit{resp} = H(c \concat u \concat r)^{d_b} = m^{d_b} \mod n
 \end{equation}
 and returns $\mathit{resp}$ to $a$. Now, $a$ can calculate the signature $s$:
 \begin{equation}
-s = H(c \concat r)^{d_a} \cdot \mathit{resp} = m^{d_a} m^{d_b} \mod n \enspace,
+s = H(c \concat u \concat r)^{d_a} \cdot \mathit{resp} = m^{d_a} m^{d_b} \mod n \enspace,
 \end{equation}
 construct a valid signature, and thus log in.
 
@@ -126,7 +126,7 @@ The mediator need only be partially trusted. It cannot authenticate as the user 
 cooperation of one of the user's physical devices. The user only needs to trust the mediator to not
 collude with attackers who steal devices, and to correctly delete key fragments when the user
 requires key revocation. The user's privacy is protected by hashing the message
-$c \concat r$ before sending it to the mediator, so the mediator does not learn which
+$c \concat u \concat r$ before sending it to the mediator, so the mediator does not learn which
 services the user is logging in to, or which usernames they are using.
 
 From the point of view of a service that uses public key authentication, the mediator does not even
@@ -220,7 +220,7 @@ the mediator refuses to compute $m^{d_b}$ unless the device proves that it knows
 \item In addition to the signing request $\mathit{req}$, the client is required to submit a
 signature $s_\mathit{req}$:
 \begin{align}
-    \mathit{req} &= H(c \concat r) \concat n \concat e \\
+    \mathit{req} &= H(c \concat u \concat r) \concat n \concat e \\
     s_\mathit{req} &= H(\mathit{req} \concat \mathit{cb})^{d_a^\prime} \mod n
 \end{align}
 where $\mathit{cb}$ is the \texttt{tls-unique} channel binding~\cite{ChannelBinding}
@@ -237,7 +237,7 @@ the user's public key $(n, e)$. This check succeeds if $d_a^\prime = d_a$ (i.e.\
 was correct), and if $\mathit{cb}^\prime = \mathit{cb}$ (preventing MITM and replay attacks).
 \item If the signature is valid, the mediator computes
 \begin{equation}
-\mathit{resp} = H(c \concat r)^{d_b} \mod n
+\mathit{resp} = H(c \concat u \concat r)^{d_b} \mod n
 \end{equation}
 as before, and returns it to the client. If the signature is not valid, the mediator returns ``bad
 signature''. A password-guessing attacker merely learns that the password guess
