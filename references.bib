@@ -1,3 +1,4 @@
+%% http://www.cl.cam.ac.uk/~mgk25/pet2004-fpd.pdf
 @incollection { Kuhn05,
     author = {Kuhn, Markus},
     affiliation = {Computer Laboratory, University of Cambridge, 15 JJ Thomson Avenue, Cambridge, CB3 0FD United Kingdom},
@@ -9,19 +10,33 @@
     isbn = {978-3-540-26203-9},
     pages = {88-107},
     volume = {3424},
-    url = {http://www.cl.cam.ac.uk/~mgk25/pet2004-fpd.pdf},
     year = {2005}
 }
 
+%% http://people.csail.mit.edu/rivest/Rsapaper.pdf
+@article { RSA,
+    author = {R.L. Rivest and A. Shamir and L. Adleman},
+    title = {A method for obtaining digital signatures and public-key cryptosystems},
+    journal = cacm,
+    year = {1978},
+    volume = {21},
+    number = {2},
+    pages = {120--126},
+    month = feb,
+    doi = {10.1145/359340.359342}
+}
+
+%% http://crypto.stanford.edu/~dabo/pubs/papers/sem.pdf
 @article { Boneh01,
     author = {Dan Boneh and Xuhua Ding and Gene Tsudik and Chi Ming Wong},
     title = {A Method for Fast Revocation of Public Key Certificates and Security Capabilities},
     journal = {Proceedings of the 10th {USENIX} Security Symposium},
     year = {2001},
-    pages = {297-308},
-    url = {http://crypto.stanford.edu/~dabo/pubs/papers/sem.pdf}
+    month = aug,
+    pages = {297-308}
 }
 
+%% http://crypto.stanford.edu/~dabo/abstracts/sharing.html
 @article { Boneh01b,
     author = {Boneh, Dan and Franklin, Matthew},
     title = {Efficient generation of shared {RSA} keys},
@@ -30,40 +45,51 @@
     volume = {48},
     number = {4},
     pages = {702--722},
-    month = jul,
-    url = {http://crypto.stanford.edu/~dabo/abstracts/sharing.html}
+    month = jul
 }
 
+%% https://tools.ietf.org/html/draft-kutylowski-mrsa-algorithm-03
 @misc { Kutyiowski12,
     title = {Mediated {RSA} cryptography specification for additive private key splitting ({mRSAA})},
     author = {Kuty{\l}owski, Miros{\l}aw and Kubiak, Przemys{\l}aw and Tabor, Micha{\l} and Wachnik, Daniel},
     month = nov,
     year = {2012},
-    howpublished = "IETF Internet-Draft, \url{https://tools.ietf.org/html/draft-kutylowski-mrsa-algorithm-03}"
+    howpublished = "IETF Internet Draft"
+}
+
+%% https://www.cs.columbia.edu/~smb/papers/neke.pdf
+@inproceedings { Bellovin92,
+    author = {Bellovin, Steven M and Merritt, Michael},
+    title = {Encrypted key exchange: password-based protocols secure against dictionary attacks},
+    booktitle = {IEEE Symposium on Research in Security and Privacy},
+    year = {1992},
+    pages = {72--84},
+    month = may,
+    doi = {10.1109/RISP.1992.213269}
 }
 
 @misc { OpenID09,
     author = {Kissel, Brian},
-    title = {Open{ID} 2009 Year in Review},
-    month = {Dec},
+    title = {{OpenID} 2009 Year in Review},
+    month = dec,
     year = {2009},
     howpublished = "\url{http://openid.net/2009/12/16/openid-2009-year-in-review/}"
 }
 
+%% http://tools.ietf.org/html/rfc5849
 @misc { OAuth,
     author = {Eran Hammer-Lahav},
-    title = {{RFC} 5849 -- {T}he {OA}uth 1.0 Protocol},
-    publisher = {IETF},
-    howpublished = "\url{http://tools.ietf.org/html/rfc5849}",
-    month = {Apr},
+    title = {The {OAuth} 1.0 Protocol},
+    howpublished = {IETF RFC 5849},
+    month = apr,
     year = {2010}
 }
 
 @misc { OpenID,
     author = {{OpenID Foundation}},
-    title = {{O}pen{ID} Authentication 2.0 -- Final},
+    title = {{OpenID} Authentication 2.0 -- Final},
     howpublished = "\url{http://openid.net/specs/openid-authentication-2_0.html}",
-    month = {Dec},
+    month = dec,
     year = {2007}
 }
 
@@ -81,55 +107,67 @@
     howpublished = "\url{https://github.com/mozilla/id-specs/blob/prod/browserid/index.md}"
 }
 
+%% http://tools.ietf.org/html/rfc5246
 @misc { TLS,
     author = {Tim Dierks and Eric Rescorla},
-    title = {{RFC} 5246 -- The {T}ransport {L}ayer {S}ecurity ({TLS}) Protocol Version 1.2},
-    publisher = {IETF},
-    howpublished = "\url{http://tools.ietf.org/html/rfc5246}",
-    month = {Aug},
+    title = {The {T}ransport {L}ayer {S}ecurity ({TLS}) Protocol Version 1.2},
+    howpublished = {Network Working Group RFC 5246},
+    month = aug,
     year = {2008}
 }
 
+%% http://tools.ietf.org/html/rfc4252
+@misc { SSH,
+    author = {T. Ylonen and C. Lonvick},
+    title = {The {S}ecure {S}hell ({SSH}) Authentication Protocol},
+    howpublished = {Network Working Group RFC 4252},
+    month = jan,
+    year = {2006}
+}
+
+%% https://tools.ietf.org/html/rfc5929
 @misc { ChannelBinding,
     author = {Jeff Altman and Nicolas Williams and Larry Zhu},
-    title = {{RFC} 5929 -- Channel Bindings for {TLS}},
-    publisher = {IETF},
-    howpublished = "\url{https://tools.ietf.org/html/rfc5929}",
-    month = {Jul},
+    title = {Channel Bindings for {TLS}},
+    howpublished = {IETF RFC 5929},
+    month = jul,
     year = {2010}
 }
 
+%% http://tools.ietf.org/html/rfc6960
 @misc { OCSP,
     author = {Stefan Santesson and Michael Myers and Rich Ankney and Ambarish Malpani and Slava Galperin and Carlisle Adams},
-    title = {{RFC} 6960: {X}.509 Internet Public Key Infrastructure -- {O}nline {C}ertificate {S}tatus {P}rotocol {(OCSP)}},
-    publisher = {IETF},
-    howpublished = "\url{http://tools.ietf.org/html/rfc6960}",
-    month = {Jun},
+    title = {{X}.509 Internet Public Key Infrastructure -- {O}nline {C}ertificate {S}tatus {P}rotocol {(OCSP)}},
+    howpublished = "IETF RFC 6960",
+    month = jun,
     year = {2013}
 }
 
+%% https://tools.ietf.org/html/rfc5802
 @misc { SCRAM,
     author = {Newman, C and Menon-Sen, A and Melnikov, A and Williams, N},
-    title = {{RFC} 5802 -- {S}alted Challenge Response Authentication Mechanism ({SCRAM}) {SASL} and {GSS-API} Mechanisms},
-    howpublished = "\url{https://tools.ietf.org/html/rfc5802}",
+    title = {Salted Challenge Response Authentication Mechanism ({SCRAM}) {SASL} and {GSS-API} Mechanisms},
+    howpublished = {IETF RFC 5802},
     year = {2010},
-    month = {Jul}
+    month = jul
 }
 
+%% http://tools.ietf.org/html/rfc6238
 @misc { TOTP,
     author = {D M'Raihi and S Machani and M Pei and J Rydell},
-    title = {{RFC} 6238 -- {TOTP}: Time-Based One-Time Password Algorithm},
-    howpublished = "\url{http://tools.ietf.org/html/rfc6238}",
+    title = {{TOTP}: Time-Based One-Time Password Algorithm},
+    howpublished = {IETF RFC 6238},
     year = {2011},
-    month = {May}
+    month = may
 }
 
+%% https://tools.ietf.org/html/rfc6287
 @misc { OCRA,
     author = {D M'Raihi and J Rydell and S Bajaj and S Machani and D Naccache},
-    title = {{RFC} 6287 -- {OCRA}: {OATH} Challenge-Response Algorithm},
-    howpublished = "\url{https://tools.ietf.org/html/rfc6287}",
+    title = {{OCRA}: {OATH} Challenge-Response Algorithm},
+    howpublished = {IETF RFC 6287},
     year = {2011},
-    month = {Jun}
+    month = jun
 }
 
 @misc { CertTrans,
@@ -144,50 +182,54 @@
     howpublished = "\url{http://developers.google.com/accounts/docs/OpenID}"
 }
 
+%% https://fidoalliance.org/specs/fido-u2f-overview-ps-20150514.pdf
 @misc { FIDOOverview,
-    author = {Philpott, Rob and Srinivas, Sampath and Kemp, John},
-    title = {{FIDO} {UAF} Architectural Overview},
-    month = {Feb},
-    year = {2014},
-    howpublished = "FIDO Alliance review draft, \url{https://fidoalliance.org/specs/fido-uaf-overview-v1.0-rd-20140209.pdf}"
+    author = {Sampath Srinivas and Dirk Balfanz and Eric Tiffany and Alexei Czeskis},
+    title = {Universal 2nd Factor ({U2F}) Overview},
+    month = may,
+    year = {2015},
+    howpublished = "FIDO Alliance Proposed Standard"
 }
 
+
+%% https://fidoalliance.org/wp-content/uploads/2014/12/fido-uaf-protocol-v1.0-ps-20141208.pdf
 @misc { FIDOSpec,
-    author = {Lindeman, Rolf and Baghdasaryan, Davit and Tiffany, Eric and Balfanz, Dirk},
-    title = {{FIDO} {UAF} Protocol Specification},
-    month = {Feb},
+    author = {Rolf Lindemann and Davit Baghdasaryan and Eric Tiffany and Dirk Balfanz and Brad Hill and Jeff Hodges},
+    title = {{FIDO} {UAF} Protocol Specification v1.0},
+    month = dec,
     year = {2014},
-    howpublished = "FIDO Alliance review draft, \url{https://fidoalliance.org/specs/fido-uaf-protocol-v1.0-rd-20140209.pdf}"
+    howpublished = "FIDO Alliance Proposed Standard"
 }
 
+%% http://tools.ietf.org/html/rfc3447
 @misc { PKCS1,
     author = {Jonsson, J and Kaliski, B},
-    title = {{RFC} 3447: {P}ublic-{K}ey {C}ryptography {S}tandards ({PKCS}) \#1: {RSA} Cryptography Specifications Version 2.1},
-    publisher = {IETF},
-    howpublished = "\url{http://tools.ietf.org/html/rfc3447}",
-    month = {Feb},
+    title = {{P}ublic-{K}ey {C}ryptography {S}tandards ({PKCS}) \#1: {RSA} Cryptography Specifications Version 2.1},
+    howpublished = {Network Working Group RFC 3447},
+    month = feb,
     year = {2003}
 }
 
+%% http://www.internetsociety.org/sites/default/files/12_4_1.pdf
 @inproceedings { Parsovs14,
     author = {Parsovs, Arnis},
-    title = {{Practical Issues with TLS Client Certificate Authentication}},
+    title = {Practical Issues with {TLS} Client Certificate Authentication},
     booktitle = {Network and Distributed System Security Symposium (NDSS)},
     year = {2014},
-    month = {Feb},
-    howpublished = "\url{http://www.internetsociety.org/sites/default/files/12_4_1.pdf}"
+    month = feb
 }
 
+%% http://research.google.com/pubs/archive/38357.pdf
 @inproceedings { Dietz12,
     author = {Dietz, Michael and Czeskis, Alexei and Balfanz, Dirk and Wallach, Dan S},
     title = {{O}rigin-{B}ound {C}ertificates: A Fresh Approach to Strong Client Authentication for the Web},
     booktitle = {21st USENIX Security Symposium},
     year = {2012},
     pages = {317--332},
-    month = {Aug},
-    howpublished = "\url{http://research.google.com/pubs/archive/38357.pdf}"
+    month = aug
 }
 
+%% http://www.cl.cam.ac.uk/~fms27/papers/2011-Stajano-pico.pdf
 @incollection { Stajano11,
     author = {Stajano, Frank},
     title = {Pico: No more passwords!},
@@ -195,7 +237,6 @@
     series = {Lecture Notes in Computer Science},
     publisher = {Springer},
     isbn = {978-3-642-25866-4},
-    url = {http://www.cl.cam.ac.uk/~fms27/papers/2011-Stajano-pico.pdf},
     year = {2011}
 }
 
@@ -210,27 +251,27 @@
 @misc { Scott14,
     author = {Scott, Michael},
     title = {{M-Pin}: A multi-factor zero knowledge authentication protocol},
-    month = {Mar},
+    month = mar,
     year = {2014},
-    howpublished = "\url{http://www.certivox.com/Portals/230906/downloads/certivox_labs_mpin.pdf}"
+    howpublished = "Certivox Labs, \url{http://www.certivox.com/Portals/230906/downloads/certivox_labs_mpin.pdf}"
 }
 
+%% https://www.linshunghuang.com/papers/mitm.pdf
 @inproceedings { Huang14,
     author = {Huang, Lin-Shung and Rice, Alex and Ellingsen, Erling and Jackson, Collin},
     title = {Analyzing Forged {SSL} Certificates in the Wild},
     booktitle = {35th IEEE Symposium on Security and Privacy},
     year = {2014},
-    month = may,
-    howpublished = "\url{https://www.linshunghuang.com/papers/mitm.pdf}"
+    month = may
 }
 
+%% https://secure-resumption.com/tlsauth.pdf
 @inproceedings { Bhargavan14,
     author = {Bhargavan, Karthikeyan and Delignat-Lavaud, Antoine and Fournet, C{\'e}dric and Pironti, Alfredo and Strub, Pierre-Yves},
     title = {Triple Handshakes and Cookie Cutters: Breaking and Fixing Authentication over {TLS}},
     booktitle = {35th IEEE Symposium on Security and Privacy},
     year = {2014},
-    month = may,
-    howpublished = "\url{https://secure-resumption.com/tlsauth.pdf}"
+    month = may
 }
 
 @misc { Adkins11,
@@ -238,9 +279,10 @@
     title = {An update on attempted man-in-the-middle attacks},
     year = {2011},
     month = aug,
-    howpublished = "\url{http://googleonlinesecurity.blogspot.co.uk/2011/08/update-on-attempted-man-in-middle.html}"
+    howpublished = "Google Inc, \url{http://googleonlinesecurity.blogspot.co.uk/2011/08/update-on-attempted-man-in-middle.html}"
 }
 
+%% http://zoo.cs.yale.edu/classes/cs426/2013/bib/parker83detection.pdf
 @article { ParkerJr83,
     author = {Parker, Jr, D Stott and Popek, Gerald J and Rudisin, Gerard and Stoughton, Allen and Walker, Bruce J and Walton, Evelyn and Chow, Johanna M and Edwards, David and Kiser, Stephen and Kline, Charles},
     title = {Detection of Mutual Inconsistency in Distributed Systems},
@@ -249,62 +291,62 @@
     volume = {SE-9},
     number = {3},
     pages = {240--247},
-    month = may,
-    howpublished = "\url{http://zoo.cs.yale.edu/classes/cs426/2013/bib/parker83detection.pdf}"
+    month = may
 }
 
+%% http://www.bitsavers.org/pdf/xerox/parc/techReports/CSL-89-1_Epidemic_Algorithms_for_Replicated_Database_Maintenance.pdf
 @techreport { Demers89,
     author = {Demers, Alan J and Gealy, Mark and Greene, Dan and Hauser, Carl H and Irish, Wes and Larson, John and Manning, Sue and Shenker, Scott and Sturgis, Howard and Swinehart, Dan and Terry, Douglas B and Woods, Don},
     title = {Epidemic Algorithms for Replicated Database Maintenance},
     year = {1989},
     number = {CSL-89-1},
     month = jan,
-    institution = {Xerox Palo Alto Research Centers},
-    howpublished = "\url{http://www.bitsavers.org/pdf/xerox/parc/techReports/CSL-89-1_Epidemic_Algorithms_for_Replicated_Database_Maintenance.pdf}"
+    institution = {Xerox Palo Alto Research Centers}
 }
 
+%% http://hal.inria.fr/inria-00555588/
 @techreport { Shapiro11,
     author = {Shapiro, Marc and Pregui{\c c}a, Nuno and Baquero, Carlos and Zawirski, Marek},
     title = {A comprehensive study of Convergent and Commutative Replicated Data Types},
     year = {2011},
     number = {7506},
     month = jan,
-    institution = {INRIA},
-    howpublished = "\url{http://hal.inria.fr/inria-00555588/}"
+    institution = {INRIA}
 }
 
+%% http://crypto.stanford.edu/~dabo/pubs/papers/pwdmgrBrowser.pdf
 @inproceedings { Silver14,
     author = {Silver, David and Jana, Suman and Chen, Eric and Jackson, Collin and Boneh, Dan},
     title = {Password Managers: Attacks and Defenses},
     booktitle = {23rd USENIX Security Symposium},
     year = {2014},
-    month = aug,
-    howpublished = "\url{http://crypto.stanford.edu/~dabo/pubs/papers/pwdmgrBrowser.pdf}"
+    month = aug
 }
 
+%% https://www.usenix.org/system/files/conference/usenixsecurity14/sec14-paper-li-zhiwei.pdf
 @inproceedings { Li14,
     author = {Li, Zhiwei and He, Warren and Akhawe, Devdatta and Song, Dawn},
     title = {The Emperor's New Password Manager: Security Analysis of Web-based Password Managers},
     booktitle = {23rd USENIX Security Symposium},
     year = {2014},
-    month = aug,
-    howpublished = "\url{https://www.usenix.org/system/files/conference/usenixsecurity14/sec14-paper-li-zhiwei.pdf}"
+    month = aug
 }
 
+%% http://www.tarsnap.com/scrypt.html
 @misc { Percival09,
     author = {Colin Percival},
     title = {Stronger Key Derivation via Sequential Memory-Hard Functions},
     year = {2009},
     month = may,
-    howpublished = "BSDCan '09, \url{http://www.tarsnap.com/scrypt.html}"
+    howpublished = "BSDCan '09"
 }
 
+%% http://web.cs.ucdavis.edu/~rogaway/papers/ctr.pdf
 @misc { Lipmaa00,
     author = {Lipmaa, Helger and Rogaway, Phillip and Wagner, David},
     title = {Comments to {NIST} concerning {AES} Modes of Operations: {CTR}-Mode Encryption},
     year = {2000},
-    month = sep,
-    howpublished = "\url{http://web.cs.ucdavis.edu/~rogaway/papers/ctr.pdf}"
+    month = sep
 }
 
 @misc { Borchert11,
@@ -325,7 +367,7 @@
 
 @misc { Chappell06,
     author = {Chappell, David},
-    title = {{Introducing Windows CardSpace}},
+    title = {Introducing {Windows CardSpace}},
     year = {2006},
     month = apr,
     howpublished = "\url{http://msdn.microsoft.com/en-us/library/aa480189.aspx?ppud=4}"
@@ -339,11 +381,11 @@
     howpublished = "Microsoft Research, \url{http://research.microsoft.com/apps/pubs/default.aspx?id=166980}"
 }
 
+%% https://www.cl.cam.ac.uk/~drt24/papers/spw14-07-Thomas.pdf
 @inproceedings { Thomas14,
     author = {Thomas, Daniel R and Beresford, Alastair R},
     title = {Better authentication: password revolution by evolution},
     booktitle = {22nd International Workshop on Security Protocols},
     year = {2014},
-    month = mar,
-    howpublished = "\url{https://www.cl.cam.ac.uk/~drt24/papers/spw14-07-Thomas.pdf}"
+    month = mar
 }
