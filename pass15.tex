@@ -1,13 +1,9 @@
 \documentclass{llncs}
-%\usepackage[utf8]{inputenc}
 \usepackage{amsmath} % for \mod
 \usepackage[hyphens]{url}
-%\usepackage{doi}
 \usepackage{hyperref}
-%\usepackage[hyphenbreaks]{breakurl} % Fix URL line breaking when using dvips (e.g. arxiv.org)
 
 \newcommand*{\concat}{\mathbin{\|}}
-\hyphenation{time-stamp}
 
 \begin{document}
 \title{Strengthening Public Key Authentication against Key Theft}
@@ -21,12 +17,11 @@
 \begin{abstract}
 Authentication protocols based on an asymmetric keypair (e.g.\ SSH public key authentication, TLS
 client certificates, FIDO UAF and U2F) can provide strong authentication provided that the private
-key is adequately protected. Use of dedicated cryptographic hardware helps, but does not solve all
+key is adequately protected. Use of dedicated cryptographic hardware helps, but does not remove all
 risks of key theft. In this paper we discuss algorithms for further protecting private key material
 against theft, based on mediated RSA (mRSA) signatures. We show how users can revoke lost or stolen
-devices and provision new devices without relying on a trusted authority. When private key material
-is encrypted with a password, we show how to prevent offline brute-force attacks using a
-zero-knowledge proof.
+devices without relying on a trusted authority. When private key material is encrypted with a
+password, we show how a zero-knowledge proof can prevent offline brute-force attacks.
 \end{abstract}
 
 \section{Public Key Authentication}\label{sec:intro}
@@ -34,113 +29,81 @@ zero-knowledge proof.
 In a public key authentication system, each username $r$ is associated with a public key. For
 example, when RSA~\cite{RSA} is used,\footnote{In this paper we focus on RSA. We hope to extend our
 approach to support other public-key cryptosystems such as ECC in future work.} a user's public key
-$(n, e)$ consists of the modulus $n$ and the public exponent $e$. A service that needs to
-authenticate users may store a set of known public keys for a given username $r$, or it may rely on
-a certificate authority (CA) to associate usernames with public keys.
+$(n, e)$ consists of the modulus $n$ and the public exponent $e$.
 
+A service that needs to authenticate users may store a set of known public keys for a given username
+$r$, or it may rely on a certificate authority (CA) to associate usernames with public keys.
 Whenever a user wishes to log in, they must prove ownership of the corresponding private key
-$(n, d)$, where $n$ is the same modulus as in the public key, and $d$ is the private exponent. This
-ownership proof is often implemented by constructing an authentication request (consisting of the
-username, a session identifier or challenge, and other properties), signing it on the client using
-the private key, and verifying the signature in the service. Variations of this pattern are used in
-SSH~\cite{SSH}, TLS client certificates~\cite{TLS}, and FIDO U2F~\cite{FIDOOverview}.
+$(n, d)$, where $n$ is the same modulus as in the public key, and $d$ is the private exponent.
 
-In this paper we focus on the computation of the signature using an RSA private key. For clarity, we
-omit full protocol details, and describe a simple abstract protocol for website authentication. Our
-technique can be adapted to operate within any of the aforementioned protocols.
+\subsection{Constructing a Signature}\label{sec:signature}
 
-\subsection{Constructing a Signature}\label{sec:mandate}
-
-To log in or sign up to a service, the user's client first requests a challenge $c$ from the
-service. It then calculates the RSA signature $s$:
+For example, a user may log in to a service by constructing an RSA signature $s$:
 \begin{equation}
-s = m^d = H(c \concat u \concat r)^d \mod n
+s = m^d = H(c \concat r)^d \mod n
 \end{equation}
-where $u$ is the URL of the service, $r$ is the username, and $(d, n)$ is the private key. The
-symbol $\concat$ denotes encoding and concatenating the values into a byte string. $H$ is shorthand
-for the \textsc{EMSA-PSS-Encode} operation (hashing and padding) defined in PKCS\#1~\cite{PKCS1}.
+where $c$ is a challenge or session ID obtained from the service,\footnote{When TLS is used, a
+channel binding~\cite{ChannelBinding} or Origin-Bound Certificate~\cite{Dietz12} may be incorporated
+into the challenge $c$.} $r$ is the username, and $(d, n)$ is the private key. The symbol $\concat$
+denotes encoding and concatenating the values into a byte string. $H$ is shorthand for the
+\textsc{EMSA-PSS-Encode} operation (hashing and padding) defined in PKCS\#1~\cite{PKCS1}.
 
-The client then constructs the \emph{mandate}, which combines the RSA-signed message and the user's
-public key:
-\begin{equation}
-\mathit{mandate} = s \concat c \concat u \concat r \concat n \concat e \enspace.
-\end{equation}
-
-The mandate is sent to the server over TLS.\footnote{A channel binding~\cite{ChannelBinding} or
-Origin-Bound Certificate~\cite{Dietz12} of this TLS connection may be incorporated into the
-signature, e.g.\ encoded in the challenge $c$.} The server can verify the mandate by checking that
-$s$ is a valid PKCS\#1 signature, $c$ and $u$ are valid for this service, and that $(n, e)$ is an
-acceptable public key for user $r$.
+The client then sends the authentication request $(s, c, r, n, e)$ to the service, where it is
+validated by checking that $s$ is a valid PKCS\#1 signature of $c \concat r$ using the public key
+$(n, e)$, that $c$ is valid for this service, and that $(n, e)$ is an acceptable public key for user
+$r$. Variations of this pattern are used in SSH~\cite{SSH}, TLS client certificates~\cite{TLS}, and
+FIDO U2F~\cite{FIDOOverview}. The techniques we describe in this paper can be adapted to operate
+within any of these protocols.
 
 \subsection{Human-to-Machine Authentication}\label{sec:human-to-machine}
 
-The protocol of Sect.~\ref{sec:mandate} is a machine-to-machine authentication protocol, and it
+The protocol of Sect.~\ref{sec:signature} is a machine-to-machine authentication protocol, and it
 needs to be preceded by a human-to-machine authentication step: for example, a password or biometric
 information can be used by the client device to unlock or decrypt the private key.
 
 We assume that the human-to-machine authentication step is weaker than a cryptographic signature
-(e.g.\ due to using a weak encryption password), and that it can feasibly be broken by an attacker
-if the device storing the private key is lost or compromised. Thus, the goal of human-to-machine
-authentication is only to delay an attacker for long enough that the user has enough time to revoke
-the compromised device's key (see Sect.~\ref{sec:management}).
+(e.g.\ due to using a weak encryption password): if the device storing the private key is lost or
+compromised, it is only a question of time before an attacker can obtain the private key. In
+Sect.~\ref{sec:revocation} we discuss an algorithm for revoking key material on lost devices, and in
+Sect.~\ref{sec:ratelimit} we show how to strengthen encrypted key material against offline attacks
+(thus giving the user more time to revoke the compromised device's key before the human-to-machine
+authentication step is broken).
 
-In Sect.~\ref{sec:ratelimit} we discuss a technique for strengthening the human-to-machine
-authentication step.
+\section{Key Revocation}\label{sec:revocation}
 
-\section{Key Management}\label{sec:management}
+We require that the private exponent $d$ is never stored on any one device, even in encrypted form.
+Instead, we split it into key fragments that are distributed among several devices, using the
+\emph{mediated RSA} (mRSA) scheme~\cite{Boneh01,Kutyiowski12}.
 
-If the device storing the private key is lost or stolen, the user needs a mechanism for revoking it.
-This raises the question: how can the system ensure that only the legitimate owner of the key may
-revoke it (to prevent denial of service), in the absence of a key identifying the user (since it has
-been lost)? Various approaches have been proposed:
+\subsection{Key Splitting}\label{sec:splitting}
 
-\begin{itemize}
-\item If the user's identity was originally established out-of-band by a CA, the same process can be
-used to confirm that the revocation request is genuine, and the CA can add the user's certificate to
-a revocation list (CRL).
-\item A separate revocation key, perhaps stored offline on paper, can be used. However, this key
-would also be prone to loss as it is only rarely needed.
-\end{itemize}
-
-In this section we discuss a user-friendly approach for revoking lost devices and enrolling new
-devices that does not depend on a CA. It is based on the assumption that users have multiple devices
-(e.g.\ laptop, smartphone, tablet, game console) on which they access services.
-
-\subsection{Key Revocation}\label{sec:revocation}
-
-To mitigate this risk of key theft, we ensure that the private exponent $d$ is never stored on any
-one device, even in encrypted form. Instead, we split it into key fragments that are distributed
-among the user's devices. We use the \emph{mediated RSA} (mRSA) scheme~\cite{Boneh01,Kutyiowski12},
-which is based on the fact that
+mRSA is based on the identity
 \begin{equation}
 s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n
 \end{equation}
 provided that $d = d_a + d_b \mod \phi(n)$.
 
-If two devices $a$ and $b$ each store a key fragment $d_a$ and $d_b$ respectively, and those
-fragments sum to the private exponent $d$, then we call those devices \emph{paired}. ($d$ could be
-split into any number of fragments $f$, but we focus on the case $f=2$.) In order to
-generate a valid signature, any two paired devices need to collaborate.
+If two devices $a$ and $b$ each store a key fragment $d_a$ and $d_b$ respectively, whose sum is the
+private exponent $d$, then we call those devices \emph{paired}. In order to generate a valid
+signature, any two paired devices need to collaborate.
 
-If device $a$ wants to generate a mandate, it can send a signing request $\mathit{req}$ to device $b$:
+If device $a$ wants to generate a signature, it can send a signing request $\mathit{req}$ to device $b$:
 \begin{equation}
-\mathit{req} = H(c \concat u \concat r) \concat n \concat e
+\mathit{req} = H(c \concat r) \concat n \concat e
 \end{equation}
 where the public key $(n, e)$ indicates which key should be used, in case device $b$ stores multiple
 keys. Device $b$ then uses its key fragment $d_b$ to calculate a response:
 \begin{equation}
-\mathit{resp} = H(c \concat u \concat r)^{d_b} = m^{d_b} \mod n
+\mathit{resp} = H(c \concat r)^{d_b} = m^{d_b} \mod n
 \end{equation}
 and returns $\mathit{resp}$ to $a$. Now, $a$ can calculate the signature $s$:
 \begin{equation}
-s = H(c \concat u \concat r)^{d_a} \cdot \mathit{resp} = m^{d_a} m^{d_b} \mod n \enspace,
+s = H(c \concat r)^{d_a} \cdot \mathit{resp} = m^{d_a} m^{d_b} \mod n \enspace,
 \end{equation}
-construct a mandate with a valid signature, and thus log in.
+construct a valid signature, and thus log in.
 
-If a device is lost, stolen or compromised, this scheme allows the user to revoke that device's
-login capability: every device that is paired with the lost device must be instructed to delete the
-key fragment from the pairing with the lost device. If the user physically controls all devices that
-are paired with the lost device, this can simply be done via the user interface. When all the paired
+To revoke a device's key fragment, every device that is paired with the lost device must be
+instructed to delete the key fragment from the pairing with the lost device. When all the paired
 fragments have been deleted, the key fragments on the lost device become useless.
 
 \subsection{The Mediator Service}\label{sec:mediator}
@@ -151,7 +114,7 @@ there is a simple solution: one of the user's `devices' may be a remote service 
 which we call the \emph{mediator}. This service stores key fragments that are paired with each of
 the user's physical devices, and responds to signing requests by performing the modular
 exponentiation using its key fragments. This allows a user to authenticate with services using only
-one physical device -- the coordination with the mediator happens automatically behind the scenes.
+one physical device, assuming that an internet connection is available.
 
 When the user requires a device to be revoked, they must authenticate the revocation request from
 one of their other devices (see Sect.~\ref{sec:ratelimit} for an algorithm). This implies that a
@@ -163,15 +126,13 @@ The mediator need only be partially trusted. It cannot authenticate as the user 
 cooperation of one of the user's physical devices. The user only needs to trust the mediator to not
 collude with attackers who steal devices, and to correctly delete key fragments when the user
 requires key revocation. The user's privacy is protected by hashing the message
-$c \concat u \concat r$ before sending it to the mediator, so the mediator does not learn which
+$c \concat r$ before sending it to the mediator, so the mediator does not learn which
 services the user is logging in to, or which usernames they are using.
 
 From the point of view of a service that uses public key authentication, the mediator does not even
-exist: a service simply verifies the RSA signature on a mandate, and does not care how that
+exist: a service simply verifies the RSA signature, and does not care how that
 signature was constructed. This is in contrast to federated login systems such as OpenID, where the
 relying party must trust the identity provider.
-
-% TODO section on enrolling new devices
 
 \section{Rate Limiting Password Guesses}\label{sec:ratelimit}
 
@@ -186,37 +147,80 @@ fragment is almost indistinguishable from the garbage that results from attempti
 the wrong password (see Sect.~\ref{sec:fragment-encryption}).
 
 Assuming the attacker has no other key fragments, they can only determine whether the password guess
-was correct by communicating with the mediator and testing whether they are able to construct a
-valid signature. This gives us an opportunity to rate-limit password guessing attempts: if the
-mediator receives too many requests based on an incorrect password, it can block further attempts
-and advise the user to revoke the device pairing. Similar ideas have been used to strengthen key
-agreement protocols against weak passwords~\cite{Bellovin92}.
+is correct by communicating with the mediator and testing whether they are able to construct a valid
+signature. This gives us an opportunity to rate-limit password guessing attempts: if the mediator
+receives too many requests based on an incorrect password, it can block further attempts and advise
+the user to revoke the device pairing. Similar ideas have been used to strengthen key exchange
+protocols against weak passwords~\cite{Bellovin92}.
 
 In order to achieve this, we must design the protocol as a zero-knowledge proof, such that an
 attacker must communicate with the mediator for every password guess, but without revealing the
 password or the decrypted key fragment to the mediator. An algorithm is described in
 Sect.~\ref{sec:mediator-auth}.
 
+\subsection{Key Fragment Encryption}\label{sec:fragment-encryption}
+
+Let $k$ be the minimum number of bits required to encode the RSA modulus $n$ (i.e.\ the RSA key
+length). We can encode the key fragment $d_a$ as a $k$-bit string, using zero padding for the most
+significant bits.
+
+To encrypt the key fragment, we derive an encryption key from the password $\mathit{pass}$ using a
+slow key derivation function (KDF) such as scrypt~\cite{Percival09}, and generate $k$ bits of key
+stream, e.g.\ using AES-128 in CTR mode~\cite{Lipmaa00}:
+\begin{equation}
+\mathit{efrag} =
+    \mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}))_{\{0 \dots k-1\}} \oplus d_a
+    \enspace,
+\end{equation}
+where $\mathit{ctr}$ is a random nonce that is stored in plaintext and incremented by AESCTR for
+each block of key stream.
+
+An attacker who has stolen $\mathit{efrag}$ may try to recover the key fragment by guessing a
+password $\mathit{pass}^\prime$ (from a dictionary or by brute force). Decrypting with
+$\mathit{pass}^\prime$ yields a guess $d_a^\prime$ of the key fragment:
+\begin{equation}
+d_a^\prime =
+    \mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}^\prime))_{\{0 \dots k-1\}} \oplus \mathit{efrag}
+    \enspace.
+\end{equation}
+
+If an incorrect password is guessed, $d_a^\prime$ is a uniformly distributed pseudo-random number
+between 0 and $2^k$. To what extent is it distinguishable from a correct key fragment? Key fragments
+are chosen to be uniformly distributed between 0 and $d$. Since $d < 2^k$, a password guess that
+results in a larger decrypted value is less likely to be correct than a password guess that results
+in a smaller decrypted value. A password-guessing attacker can use this knowledge to prioritize
+guesses.
+
+To quantify the bias, we generated 10,000 RSA keys ($k=2048$ bits) using OpenSSL, and generated a
+random $d_a$ with $0 \le d_a < d$ for each private exponent $d$. Table~\ref{tab:bias} shows the bias
+in the most significant bits of $d_a$ when encoded in $k$ bits. The key fragments had an entropy of
+more than 2047 bits, implying that less than one bit of information is leaked by the bias.
+
+\renewcommand{\arraystretch}{1.5}
+\setlength\tabcolsep{4pt}
+\begin{table}
+\centering
+\caption{Probability that bit $i$ of $d_a$ is 1, when encoded in $k=2048$ bits}\label{tab:bias}
+\begin{tabular}{r|rrrrrrrrr}
+$i$ & 2047 & 2046 & 2045 & 2044 & 2043 & 2042 & 2041 & 2040 & 2039 \\ \hline
+Probability &
+0.069 & 0.228 & 0.334 & 0.411 & 0.442 & 0.475 & 0.487 & 0.489 & 0.494
+\end{tabular}
+\end{table}
+
 \subsection{Authenticating Requests to the Mediator}\label{sec:mediator-auth}
 
-Say the key fragment $d_a$ has been encrypted with password $\mathit{pass}$, and the attacker has
-stolen the encrypted fragment $\mathit{efrag}$:
-\begin{equation}
-\mathit{efrag} = \mathrm{encrypt}(\mathrm{PBKDF2}(\mathit{pass}), d_a) \enspace.
-\end{equation}
-The attacker now guesses $\mathit{pass}^\prime$ and computes a guess $d_a^\prime$ of the plaintext:
-\begin{equation}
-d_a^\prime = \mathrm{decrypt}(\mathrm{PBKDF2}(\mathit{pass}^\prime), \mathit{efrag}) \enspace.
-\end{equation}
-
-To check whether $d_a^\prime = d_a$ the attacker needs to contact the mediator where $d_b$ is held.
-We modify the mediator's request processing as follows:
+The algorithm of Sect.~\ref{sec:splitting} does not prevent offline attacks: an attacker could make
+a single request to calculate $m^{d_b} \mod n$ for some $m$, and this would enable them to test
+whether a password guess $\mathit{pass}^\prime$ is correct by checking whether
+$m^{d_a^\prime} m^{d_b} \mod n$ is a valid signature. However, we can change the protocol so that
+the mediator refuses to compute $m^{d_b}$ unless the device proves that it knows the correct $d_a$:
 
 \begin{enumerate}
 \item In addition to the signing request $\mathit{req}$, the client is required to submit a
 signature $s_\mathit{req}$:
 \begin{align}
-    \mathit{req} &= H(c \concat u \concat r) \concat n \concat e \\
+    \mathit{req} &= H(c \concat r) \concat n \concat e \\
     s_\mathit{req} &= H(\mathit{req} \concat \mathit{cb})^{d_a^\prime} \mod n
 \end{align}
 where $\mathit{cb}$ is the \texttt{tls-unique} channel binding~\cite{ChannelBinding}
@@ -228,22 +232,17 @@ s_\mathit{req} \cdot H(\mathit{req} \concat \mathit{cb}^\prime)^{d_b} =
   H(\mathit{req} \concat \mathit{cb})^{d_a^\prime} \cdot
   H(\mathit{req} \concat \mathit{cb}^\prime)^{d_b} \mod n
 \end{equation}
-and checks whether the result is a valid PKCS\#1 signature of
-$\mathit{req} \concat \mathit{cb}^\prime$ for the user's public key $(n, e)$. This check succeeds if
-$d_a^\prime = d_a$ (i.e.\ the user's password was correct), and if $\mathit{cb}^\prime = \mathit{cb}$
-(preventing MITM and replay attacks).
+and checks whether the result is a valid signature of $\mathit{req} \concat \mathit{cb}^\prime$ for
+the user's public key $(n, e)$. This check succeeds if $d_a^\prime = d_a$ (i.e.\ the user's password
+was correct), and if $\mathit{cb}^\prime = \mathit{cb}$ (preventing MITM and replay attacks).
 \item If the signature is valid, the mediator computes
 \begin{equation}
-\mathit{resp} = H(c \concat u \concat r)^{d_b} \mod n
+\mathit{resp} = H(c \concat r)^{d_b} \mod n
 \end{equation}
 as before, and returns it to the client. If the signature is not valid, the mediator returns ``bad
-signature''. A password-guessing attacker learns that the password guess $\mathit{pass}^\prime$ was
-incorrect, but otherwise nothing is revealed that would help them guess the password.
+signature''. A password-guessing attacker merely learns that the password guess
+$\mathit{pass}^\prime$ was incorrect.
 \end{enumerate}
-
-Note that although the mediator computes an RSA signature using the user's private key, the value
-being signed ($\mathit{req} \concat \mathit{cb}$) cannot be used to construct a mandate, so the
-mediator cannot log in to services on the user's behalf.
 
 This protection against password guessing only works if the attacker does not have any knowledge of
 previous requests to the mediator. If the attacker knows $x^{d_a} \mod n$ (a request) or
@@ -251,70 +250,20 @@ $x^{d_b} \mod n$ (a response) for any $x$, they can brute-force the password wit
 mediator, and thus circumvent the rate-limiting.  It is therefore important that communication with
 the mediator is protected from eavesdropping (using TLS) and is not logged on the device.
 
-\subsection{Key Fragment Encryption}\label{sec:fragment-encryption}
+The same request authentication mechanism can be used to protect key revocation against abuse: the
+mediator will only process a revocation request for a device if it is authenticated by another
+device of the same user.
 
-The method described in section~\ref{sec:ratelimit} for rate-limiting password guesses depends on a
-correctly decrypted key fragment being indistinguishable from an incorrect password guess without
-contacting the mediator. In this section we propose an encryption scheme which satisfies that
-requirement.
+\section{Conclusion}
 
-We first derive an encryption key from the password using a slow, memory-hard key derivation
-function such as Scrypt~\cite{Percival09}. The parameters of the key derivation function (salt, cost
-parameter, pseudorandom function used, etc.) are stored in cleartext. We then generate a key stream
-using a symmetric block cipher such as AES-128 in CTR mode~\cite{Lipmaa00}.
+The security of key-based authentication is only as good as the protection of the private key
+material. Encrypting the private key using a slow KDF is not sufficient to prevent offline attacks.
 
-Let $k$ be the minimum number of bits required to encode the RSA modulus $n$ (i.e. the RSA key
-length). To encrypt the key fragment $d_a$, we first encode it as a $k$-bit string, using zeros for
-the most significant bits if necessary. We then take the first $k$ bits of the AES-CTR key stream
-and XOR them with the $d_a$ bit string:
-$$\mathit{efrag} = \mathit{ctr} \concat
-    (\mathrm{AESCTR}(\mathit{ctr}, \mathrm{scrypt}(\mathit{pass}))_{\{0 \dots k-1\}} \oplus d_a)$$
-where $\mathit{ctr}$ is a 128-bit random nonce that is incremented by AESCTR for each subsequent
-block of key stream.
-
-Any attempt to decrypt the key fragment results in a uniformly distributed pseudo-random number
-between 0 and $2^k$, whereas the correct key fragment is uniformly distributed between 0 and $d$.
-Since $d < 2^k$, a password guess that results in a larger decrypted value is less likely to be
-correct than a password guess that results in a smaller decrypted value. A password-guessing
-attacker can use this knowledge to prioritize guesses, but they cannot entirely rule out guesses
-without contacting the mediator.
-
-To quantify the bias, we repeatedly generated 2048-bit RSA keys using OpenSSL. Approximately 90\% of
-private exponents were in the range $0.05 < 2^{-k} d < 0.8$, with a fairly uniform distribution
-within that range. When key fragments $d_a$ (chosen uniformly from $[0, d]$) were encoded in $k$
-bits, they had on average 2.8 high-order zero bits, and the top bit was zero in 94\% of key
-fragments.
-
-% Although passwords are the prevalent authentication mechanism on the web today, there are some
-% niches in which public key authentication systems have been successfully adopted. For example:
-%
-% \begin{itemize}
-%    \item Remote SSH access to servers (TODO citation) is often authenticated with a DSA, ECDSA or
-%        RSA signature. The user's public key is added to an \verb'authorized_keys' file on the
-%        server through an out-of-band process (e.g.\ by another user who already has access). When a
-%        user wishes to log in, the private key on the user's client machine is used to sign the SSH
-%        session ID, and the server verifies the signature using the list of authorized keys.
-%    \item TLS client certificates~\cite{TLS} are used in some countries for authenticating tax
-%        returns and access to public services~\cite{Parsovs14}. A keypair is associated with a user
-%        identifier by a certificate authority (CA), and a TLS server advertises the CAs from which
-%        it accepts client certificates. A TLS client can authenticate to the server by signing a
-%        digest of the TLS key exchange messages with its private key, and sending its public key and
-%        certificate to the server.
-%    \item FIDO UAF and U2F use hardware devices for user authentication in web applications (UAF
-%        replaces password authentication, and U2F augments password authentication with a second
-%        factor). (TODO citation)
-% TODO Is OATH (soft token protocol) symmetric crypto? What about smart cards?
-% \end{itemize}
-
-% In public key authentication systems, a user proves ownership of a private key to a service by
-% generating a digital signature. If the service already knows the user's public key, or if a
-% certificate from a trusted authority associates the public key with a user identifier, then the
-% service can confirm that a request was made by the legitimate user.
-
-% If one of a user's devices is lost or stolen, it is desirable for the user to be able to revoke
-% the keys of that particular device (using one of their other devices), without affecting the
-% validity of keys on their other devices. This implies that different devices must use different
-% key material.
+In this paper we discussed two related techniques for strengthening private key material in the
+situation where a user's device is stolen or compromised: a revocation process that a user can
+initiate on another device (without requiring a trusted authority or a backup key), and a
+rate-limiting process for password guesses (giving the user more time to revoke the lost device's
+key).
 
 \bibliographystyle{splncs03}
 \bibliography{references}{}
