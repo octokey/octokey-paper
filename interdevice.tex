@@ -35,6 +35,8 @@ device acts as client or server in this channel, as the relationship between the
 symmetric. To prevent triple handshake attacks~\cite{Bhargavan14}, renegotiation and resumption
 should be disabled.
 
+% Cite SIGMA paper for mutual authentication?
+
 However, there is a practical problem: it can be difficult to establish a peer-to-peer TCP
 connection between two arbitrary devices, as they may be on different networks, behind firewalls and
 NAT routers. Bluetooth, NFC or other wireless media may also be used, depending on the hardware
@@ -238,6 +240,18 @@ $s \concat c \concat u \concat r \concat \mathit{ex} \concat n \concat e$
 to the device requesting authentication, using the secure channel. That device sends the mandate to
 the service to log in.
 \end{enumerate}
+
+% TODO: rather than getting the user to check the URL (which they might blindly accept without
+% looking), require the user to enter the name of the service they wish to log in to (using an
+% autocompleter with a list of sites where they have an account). Only proceed if the service thus
+% selected matches the service in the barcode.
+%
+% If the user hasn't previously signed up to this service, the service won't appear in the
+% autocompleter. In this case, the device can simply use the URL in the barcode. This mandate cannot
+% be used on any other service, so it's no problem if the user signs mandates for URLs on services
+% where they don't have an account.
+%
+% Cite Phoolproof paper?
 
 It is important that the user checks whether the authentication request is for the URL they were
 expecting, because a device could potentially request login for any service. As a usability
