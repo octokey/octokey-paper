@@ -24,21 +24,42 @@ devices without relying on a trusted authority. When private key material is enc
 password, we show how a zero-knowledge proof can prevent offline brute-force attacks.
 \end{abstract}
 
-\section{Public Key Authentication}\label{sec:intro}
+\section{Introduction}\label{sec:intro}
 
-In a public key authentication system, each username $r$ is associated with a public key. For
-example, when RSA~\cite{RSA} is used,\footnote{In this paper we focus on RSA. We hope to extend our
-approach to support other public-key cryptosystems such as ECC in future work.} a user's public key
-$(n, e)$ consists of the modulus $n$ and the public exponent $e$.
+Although passwords are the prevalent authentication mechanism on the internet today, there are some
+niches in which public key authentication systems have been successfully adopted. For example, SSH
+public key authentication~\cite{SSH} is widely used for remote login to servers, TLS client
+certificates~\cite{TLS} are used in some countries for access to public services~\cite{Parsovs14},
+and FIDO U2F~\cite{FIDOOverview} provides 2-factor authentication for web applications.
+
+These protocols require the user's private key to be stored on a device -- either the client device
+or dedicated cryptographic hardware -- making them primarily machine-to-machine authentication
+protocols (a ``something you have'' factor). To make the key less vulnerable to theft, the protocol
+must be preceded by a human-to-machine authentication step: for example, a password or biometric
+information can be used to unlock or decrypt the private key.
+
+However, passwords and biometric identifiers are typically low in entropy, making them susceptible
+to offline attacks if a device is stolen. In this paper we propose a scheme for storing an RSA
+private key in a way that makes it harder for an attacker to make use of stolen key
+material.\footnote{In this work we limit our attention to RSA, but we hope to extend our approach to
+support other public-key cryptosystems such as ECC in future.}
+
+In Sect.~\ref{sec:revocation} we discuss an algorithm for revoking key material on a device that is
+lost, stolen or compromised, and in Sect.~\ref{sec:ratelimit} we show how to prevent offline attacks
+(giving the user more time to revoke the compromised device's key before its human-to-machine
+authentication step is broken).
+
+\section{Revocable Public Key Authentication}\label{sec:revocation}
 
 A service that needs to authenticate users may store a set of known public keys for a given username
-$r$, or it may rely on a certificate authority (CA) to associate usernames with public keys.
-Whenever a user wishes to log in, they must prove ownership of the corresponding private key
-$(n, d)$, where $n$ is the same modulus as in the public key, and $d$ is the private exponent.
+$r$, or it may rely on a certificate authority (CA) to associate usernames with public keys. When
+RSA~\cite{RSA} is used, a user's public key $(n, e)$ consists of the modulus $n$ and the public
+exponent $e$.
 
 \subsection{Constructing a Signature}\label{sec:signature}
 
-For example, a user may log in to a service by constructing an RSA signature $s$:
+Whenever a user wishes to log in, they must prove ownership of their private key $(n, d)$, where $d$
+is the private exponent. For example, an RSA signature $s$ may be constructed as follows:
 \begin{equation}
 s = m^d = H(c \concat u \concat r)^d \mod n
 \end{equation}
@@ -52,31 +73,13 @@ PKCS\#1~\cite{PKCS1}.
 The client then sends the authentication request $(s, c, u, r, n, e)$ to the service, where it is
 validated by checking that $s$ is a valid PKCS\#1 signature of $c \concat u \concat r$ using the
 public key $(n, e)$, that $c$ and $u$ are valid for this service, and that $(n, e)$ is an acceptable
-public key for user $r$. Variations of this pattern are used in SSH~\cite{SSH}, TLS client
-certificates~\cite{TLS}, and FIDO U2F~\cite{FIDOOverview}.
-
-\subsection{Human-to-Machine Authentication}\label{sec:human-to-machine}
-
-The protocol of Sect.~\ref{sec:signature} is a machine-to-machine authentication protocol, and it
-needs to be preceded by a human-to-machine authentication step: for example, a password or biometric
-information can be used by the client device to unlock or decrypt the private key.
-
-We assume that the human-to-machine authentication step is weaker than a cryptographic signature
-(e.g.\ due to using a weak encryption password): if the device storing the private key is lost or
-compromised, it is only a question of time before an attacker can obtain the private key. In
-Sect.~\ref{sec:revocation} we discuss an algorithm for revoking key material on lost devices, and in
-Sect.~\ref{sec:ratelimit} we show how to strengthen encrypted key material against offline attacks
-(thus giving the user more time to revoke the compromised device's key before the human-to-machine
-authentication step is broken).
-
-\section{Key Revocation}\label{sec:revocation}
-
-We require that the private exponent $d$ is never stored on any one device, even in encrypted form.
-Instead, we split it into key fragments that are distributed among several devices, using the
-\emph{mediated RSA} (mRSA) scheme~\cite{Boneh01,Kutyiowski12}.
+public key for user $r$.
 
 \subsection{Key Splitting}\label{sec:splitting}
 
+If the private exponent $d$ is stored on any device, even in encrypted form, it is susceptible to
+theft and offline attacks. To prevent this, we split it into key fragments that are distributed
+among several devices, using the \emph{mediated RSA} (mRSA) scheme~\cite{Boneh01,Kutyiowski12}.
 mRSA is based on the identity:
 \begin{equation}
 s = m^d = m^{d_a + d_b} = m^{d_a} m^{d_b} \mod n
