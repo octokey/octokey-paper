@@ -20,8 +20,9 @@ Authentication protocols based on an asymmetric keypair provide strong authentic
 private key remains secret, but may fail catastrophically if the private key is lost or stolen. Even
 when encrypted with a password, stolen key material is susceptible to offline brute-force attacks.
 In this paper we demonstrate a method for rate-limiting password guesses on stolen key material,
-without requiring any special hardware. By slowing down offline attacks and enabling easy key
-revocation our algorithm reduces the risk of key compromise, even if a low-entropy password is used.
+without requiring special hardware or changes to servers. By slowing down offline attacks and
+enabling easy key revocation our algorithm reduces the risk of key compromise, even if a low-entropy
+password is used.
 \end{abstract}
 
 \section{Introduction}\label{sec:intro}
@@ -36,8 +37,9 @@ In these protocols, a user account is associated with a public key, and a client
 itself to a server by computing a digital signature using the corresponding private key. The private
 key is stored on the client device (perhaps using a cryptographic hardware module), so the signature
 implements a machine-to-machine authentication protocol (a ``something you have'' factor). Since the
-device may be lost or stolen, an additional human-to-machine authentication step is used: for
-example, a password or biometric information can be used to unlock or decrypt the private key.
+device may be lost or stolen, an additional human-to-machine authentication step is employed to
+prevent an attacker using the key: for example, a password or biometric information can be used to
+unlock or decrypt the private key.
 
 However, passwords and biometric identifiers are typically low in entropy, making them susceptible
 to offline attacks if a device is stolen. Our contribution in this paper is a scheme for storing an
@@ -53,15 +55,15 @@ cryptosystems such as ECC in future.
 In our scenario, a client stores an RSA private key encrypted with a password. The client wishes to
 authenticate itself to a server as username $r$. We assume the server already knows which RSA public
 key belongs to which username. We require that all communication occurs over TLS, and that the
-client authenticates the server through the server's PKI certificate or a pinned public key.
+client verifies the identity of the server using its existing PKI certificate or a pinned public
+key.
 
-Our adversary is an active network attacker who can eavesdrop or tamper with any messages sent over
-the network, and who can set up phishing servers under different URLs, but cannot impersonate the
-true server URL. Furthermore, the attacker can steal encrypted private key material from a client
-device (e.g.\ by stealing the physical device or by compromising it remotely), but we assume that
-the attacker cannot observe the key's encryption password when it is typed by the user. We assume
-that the user is aware when a device has been lost or compromised, and that they are willing to take
-steps to revoke it.
+Our adversary is an active network attacker, but we assume that our use of TLS prevents the attacker
+from eavesdropping or tampering with messages. The attacker can steal encrypted private key material
+from a client device (e.g.\ by stealing the physical device or by compromising it remotely). We
+assume the attacker can trick the user into accessing fake services, but cannot trick the user into
+revealing the key encryption password to the attacker. We assume that the user is aware when a
+device has been lost or compromised, and that they are willing to take steps to revoke it.
 
 In Sect.~\ref{sec:mediator} we introduce a semi-trusted service called the \emph{mediator}. We
 assume that data stored at the mediator is not accessible to the adversary who can steal private key
@@ -92,7 +94,8 @@ server and client. The channel binding prevents MITM and replay attacks. $H$ is 
 The client then uses TLS to send the authentication request $(s, c, u, r, n, e)$ to the server at
 URL $u$, which verifies that $s$ is a valid PKCS\#1 signature of
 $c \concat \mathit{cb} \concat u \concat r$ using the public key $(n, e)$, that $c$ and $u$ are
-valid for this server, and that $(n, e)$ is an acceptable public key for user $r$.
+valid for this server, that the channel binding matches, and that $(n, e)$ is a public key for user
+$r$.
 
 An adversary who steals the private exponent $d$ can easily impersonate the client. A common
 solution is to encrypt $d$ with a key derived from a password using a slow KDF such as
@@ -112,7 +115,7 @@ distribution $U(0, d)$, and $d_b = d - d_a$. Fragment $d_a$ is encrypted with th
 and stored on the client device $a$, while fragment $d_b$ is stored on a remote server called the
 \emph{mediator}. If the same user has multiple client devices, $d$ can be split in a different way
 for each device, with the counterpart of each device's fragment stored on the mediator. It would be
-easy to split $d$ into more than two fragments, but we focus on the two-fragment case.
+easy to split $d$ into three or more summands, but we focus on the two-fragment case.
 
 After the key has been split, a client device must work together with the mediator in order to
 construct a valid signature of the form in (\ref{eq:signature}). When device $a$ wants to generate a
@@ -127,7 +130,8 @@ mediator uses its key fragment $d_b$ to calculate a response:
 \end{equation}
 and returns $\mathit{resp}$ to client device $a$. Now, $a$ can calculate the RSA signature $s$:
 \begin{equation}\label{eq:assemble-sig}
-s = H(c \concat \mathit{cb} \concat u \concat r)^{d_a} \cdot \mathit{resp} = m^{d_a} m^{d_b} \mod n \enspace,
+s = H(c \concat \mathit{cb} \concat u \concat r)^{d_a} \cdot \mathit{resp} = m^{d_a} m^{d_b}
+  = m^d \mod n \enspace,
 \end{equation}
 and thus authenticate with the server at URL $u$.
 
@@ -139,11 +143,11 @@ with the mediator, so that the remaining device can revoke a lost device. A pape
 key can serve as last resort in case all devices are lost or destroyed.
 
 The mediator need only be partially trusted. It cannot authenticate as the user without the
-cooperation of one of the user's physical devices. The user only needs to trust the mediator to not
-collude with attackers who steal devices, and to correctly delete key fragments when the user
-requires key revocation. The user's privacy is protected by hashing the message
-$c \concat \mathit{cb} \concat u \concat r$ before sending it to the mediator, so the mediator does not learn which
-services the user is logging in to, or which usernames they are using.
+cooperation of one of the user's physical devices. The user only needs to trust the mediator to be
+always online, to keep key fragments safe from attackers who steal devices, and to correctly delete
+key fragments when the user requires key revocation. The user's privacy is protected by hashing the
+message $c \concat \mathit{cb} \concat u \concat r$ before sending it to the mediator, so the
+mediator does not learn which services the user is logging in to, or which usernames they are using.
 
 From the point of view of a server that uses public key authentication, the mediator does not even
 exist: a server simply verifies the RSA signature, and does not care how that signature was
@@ -194,11 +198,10 @@ pseudo-random number between 0 and $2^k$. We deliberately choose \emph{not} to u
 encryption, because the MAC would tell the attacker whether the password guess was correct, making
 an offline attack easy.
 
-Note that $d_a$ is drawn from a uniform distribution $U(0, d)$, whereas $d_a^\prime$ is drawn from a
-uniform distribution $U(0, 2^k)$. Since $d < 2^k$, the difference in distribution leaks some
-information: smaller values of $d_a^\prime$ are more likely to be correct than larger ones. However,
-in the absence of further information, the correct value $d_a$ looks ``quite similar'' to a random
-$k$-bit string.
+Note that $d_a$ is drawn from a uniform distribution $U(0, d)$, whereas $d_a^\prime$ is drawn from
+$U(0, 2^k)$. Since $d < 2^k$, the distributions are different, which leaks some information: smaller
+values of $d_a^\prime$ are more likely to be correct than larger ones. Apart from this bias, there
+are no particular features that distinguish the correct $d_a$ from a random bit string.
 
 To quantify this assertion, we generated 50,000 RSA keys ($k=2048$ bits) using OpenSSL, and drew a
 uniformly distributed random $d_a$ with $0 \le d_a < d$ for each private exponent $d$.
@@ -275,18 +278,18 @@ avoids relying on a central authority.
 \section{Conclusion}
 
 The security of key-based authentication is only as good as the protection of the private key
-material. Encrypting the private key using a slow password-based KDF is not sufficient to prevent
-offline attacks by a determined adversary.
+material. In this paper we extend mRSA, an existing method for revocation of private keys, by
+authenticating requests to the mediator.
 
-In this paper we extended mRSA, an existing method for instantaneous revocation of private keys,
-with an authentication mechanism. It ensures that an attacker who has stolen a password-encrypted
-key, and wants to guess the password, must make a request to a mediator for every attempt. This
-gives the mediator the opportunity to limit the rate at which passwords can be tested, giving the
-user more time to revoke the lost device's key.
+Our algorithm ensures that an attacker who has stolen a password-encrypted key, and wants to guess
+the password, must make a request to a mediator for every attempt. This gives the mediator the
+opportunity to limit the rate at which passwords can be tested, giving the user more time to revoke
+the lost device's key. No special hardware is required, and the server just performs standard RSA
+signature verification, making our approach compatible with existing systems.
 
 \subsection*{Acknowledgements}
 
-We thank Alastair Beresford and the reviewers for their helpful feedback.
+We thank Alastair R.\ Beresford and the reviewers for their helpful feedback.
 
 \bibliographystyle{splncs03}
 \bibliography{references}{}
